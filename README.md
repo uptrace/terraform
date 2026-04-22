@@ -16,7 +16,7 @@ Create a dev override file so Terraform uses the local binary:
 cat > .terraformrc << 'EOF'
 provider_installation {
   dev_overrides {
-    "catalin4513/uptrace-ce" = "/path/to/terraform-provider-uptrace-ce"
+    "uptrace/uptrace-ce" = "/path/to/terraform-provider-uptrace-ce"
   }
   direct {}
 }
@@ -35,7 +35,7 @@ export TF_CLI_CONFIG_FILE=/path/to/terraform-provider-uptrace-ce/.terraformrc
 terraform {
   required_providers {
     uptrace = {
-      source = "catalin4513/uptrace-ce"
+      source = "uptrace/uptrace-ce"
     }
   }
 }

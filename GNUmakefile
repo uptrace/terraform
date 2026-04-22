@@ -1,4 +1,4 @@
-PKG_NAME    := github.com/catalin4513/terraform-provider-uptrace-ce
+PKG_NAME    := github.com/uptrace/terraform
 BINARY      := terraform-provider-uptrace-ce
 VERSION     ?= dev
 LDFLAGS     := -X $(PKG_NAME)/version.ProviderVersion=$(VERSION)
@@ -26,8 +26,8 @@ build:
 
 .PHONY: install
 install: build
-	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/catalin4513/uptrace-ce/$(VERSION)/$(OS_ARCH)
-	cp $(BINARY) ~/.terraform.d/plugins/registry.terraform.io/catalin4513/uptrace-ce/$(VERSION)/$(OS_ARCH)/
+	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/uptrace/uptrace-ce/$(VERSION)/$(OS_ARCH)
+	cp $(BINARY) ~/.terraform.d/plugins/registry.terraform.io/uptrace/uptrace-ce/$(VERSION)/$(OS_ARCH)/
 
 .PHONY: test
 test:

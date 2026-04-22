@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/oapi-codegen-dd/v3/pkg/runtime"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/generated"
+	"github.com/uptrace/terraform/internal/generated"
 )
 
 func TestOrgToModel_basic(t *testing.T) {

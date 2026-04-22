@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/testutil"
+	"github.com/uptrace/terraform/internal/testutil"
 )
 
 func testAccIncidentioChannelConfig(orgName, projectName, channelName, url, apiKey string) string {

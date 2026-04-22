@@ -11,7 +11,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - "-s -w -X github.com/catalin4513/terraform-provider-uptrace-ce/version.ProviderVersion={{.Version}}"
+      - "-s -w -X github.com/uptrace/terraform/version.ProviderVersion={{.Version}}"
     goos:
       - freebsd
       - windows

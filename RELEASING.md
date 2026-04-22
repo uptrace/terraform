@@ -68,7 +68,7 @@ add the following secrets:
 After the release is published, confirm the version appears on the registry:
 
 ```
-https://registry.terraform.io/providers/catalin4513/uptrace-ce/latest
+https://registry.terraform.io/providers/uptrace/uptrace-ce/latest
 ```
 
 You can also verify locally:

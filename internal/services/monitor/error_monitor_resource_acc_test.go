@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/testutil"
+	"github.com/uptrace/terraform/internal/testutil"
 )
 
 func testAccErrorMonitorConfigBasic(orgName, projectName, monitorName string) string {

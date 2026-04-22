@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/testutil"
+	"github.com/uptrace/terraform/internal/testutil"
 )
 
 func testAccWebhookChannelConfig(orgName, projectName, channelName, webhookURL string) string {

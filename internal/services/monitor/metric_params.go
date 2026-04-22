@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/uptrace/oapi-codegen-dd/v3/pkg/runtime"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/generated"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/tfutil"
+	"github.com/uptrace/terraform/internal/generated"
+	"github.com/uptrace/terraform/internal/tfutil"
 )
 
 var (

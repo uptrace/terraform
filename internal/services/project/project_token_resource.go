@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/client"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/generated"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/tfutil"
+	"github.com/uptrace/terraform/internal/client"
+	"github.com/uptrace/terraform/internal/generated"
+	"github.com/uptrace/terraform/internal/tfutil"
 )
 
 var (

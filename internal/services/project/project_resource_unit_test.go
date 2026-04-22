@@ -11,7 +11,7 @@ import (
 	"github.com/uptrace/oapi-codegen-dd/v3/pkg/runtime"
 	str2duration "github.com/xhit/go-str2duration/v2"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/generated"
+	"github.com/uptrace/terraform/internal/generated"
 )
 
 // durationMs parses a duration string with the same library the resource

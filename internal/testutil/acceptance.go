@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/client"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/provider"
+	"github.com/uptrace/terraform/internal/client"
+	"github.com/uptrace/terraform/internal/provider"
 )
 
 // ProtoV6ProviderFactories returns the provider factories for acceptance tests.
