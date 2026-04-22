@@ -10,9 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/client"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/generated"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/testutil"
+	"github.com/uptrace/terraform/internal/client"
+	"github.com/uptrace/terraform/internal/generated"
+	"github.com/uptrace/terraform/internal/testutil"
 )
 
 // teamUserPreCheck reads and validates UPTRACE_TEST_ORG_USER_ID. Its value

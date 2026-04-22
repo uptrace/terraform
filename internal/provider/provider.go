@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/client"
+	"github.com/uptrace/terraform/internal/client"
 )
 
 // UptraceProvider implements the Terraform provider for Uptrace.

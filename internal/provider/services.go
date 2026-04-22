@@ -4,11 +4,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/services/monitor"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/services/notifchan"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/services/org"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/services/project"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/services/team"
+	"github.com/uptrace/terraform/internal/services/monitor"
+	"github.com/uptrace/terraform/internal/services/notifchan"
+	"github.com/uptrace/terraform/internal/services/org"
+	"github.com/uptrace/terraform/internal/services/project"
+	"github.com/uptrace/terraform/internal/services/team"
 )
 
 // ServiceRegistration is implemented by every service package under

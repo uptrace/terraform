@@ -1,4 +1,4 @@
-module github.com/catalin4513/terraform-provider-uptrace-ce
+module github.com/uptrace/terraform
 
 go 1.26.0
 

@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/provider"
-	"github.com/catalin4513/terraform-provider-uptrace-ce/version"
+	"github.com/uptrace/terraform/internal/provider"
+	"github.com/uptrace/terraform/version"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	flag.Parse()
 
 	err := providerserver.Serve(context.Background(), provider.New(version.ProviderVersion), providerserver.ServeOpts{
-		Address: "registry.terraform.io/catalin4513/uptrace-ce",
+		Address: "registry.terraform.io/uptrace/uptrace-ce",
 		Debug:   debug,
 	})
 	if err != nil {

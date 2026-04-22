@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/catalin4513/terraform-provider-uptrace-ce/internal/generated"
+	"github.com/uptrace/terraform/internal/generated"
 )
 
 // --- builder ---
