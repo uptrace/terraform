@@ -337,6 +337,9 @@ type UpdateOrgUserRoleResponse = OrgUserResponse
 
 type UpdateOrgUserRoleErrorResponse = BadRequest
 
+// RemoveOrgUserResponse Empty JSON object `{}`. Returned by operations that have no resource to return on success.
+type RemoveOrgUserResponse = EmptyResponse
+
 type RemoveOrgUserErrorResponse = Unauthorized
 
 // UpdateOrgUserProjectPermResponse Response wrapping an OrgUserProject under the `user` key.

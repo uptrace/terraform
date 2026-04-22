@@ -17,7 +17,7 @@ generate:
 		exit 1; \
 	fi
 	rm -f internal/generated/*.go
-	$(GO) run github.com/uptrace/oapi-codegen-dd/v3/cmd/oapi-codegen \
+	$(GO) tool oapi-codegen \
 		-config oapi-codegen.yaml openapi/openapi.yaml
 
 .PHONY: build

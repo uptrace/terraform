@@ -203,7 +203,7 @@ type ClientInterface interface {
 	UpdateOrgUserRole(ctx context.Context, options *UpdateOrgUserRoleRequestOptions, reqEditors ...runtime.RequestEditorFn) (*UpdateOrgUserRoleResponse, error)
 
 	// RemoveOrgUser Remove organization user
-	RemoveOrgUser(ctx context.Context, options *RemoveOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*struct{}, error)
+	RemoveOrgUser(ctx context.Context, options *RemoveOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*RemoveOrgUserResponse, error)
 
 	// UpdateOrgUserProjectPerm Update organization user project permission
 	UpdateOrgUserProjectPerm(ctx context.Context, options *UpdateOrgUserProjectPermRequestOptions, reqEditors ...runtime.RequestEditorFn) (*UpdateOrgUserProjectPermResponse, error)
@@ -2809,7 +2809,7 @@ func (c *Client) UpdateOrgUserRole(ctx context.Context, options *UpdateOrgUserRo
 }
 
 // RemoveOrgUser Remove organization user
-func (c *Client) RemoveOrgUser(ctx context.Context, options *RemoveOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*struct{}, error) {
+func (c *Client) RemoveOrgUser(ctx context.Context, options *RemoveOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*RemoveOrgUserResponse, error) {
 	var err error
 	reqParams := runtime.RequestOptionsParameters{
 		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/users/{org_user_id}",
@@ -2822,7 +2822,7 @@ func (c *Client) RemoveOrgUser(ctx context.Context, options *RemoveOrgUserReques
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	responseParser := func(ctx context.Context, resp *runtime.Response) (*struct{}, error) {
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*RemoveOrgUserResponse, error) {
 		bodyBytes := resp.Content
 		if resp.StatusCode != 200 {
 			target := new(RemoveOrgUserErrorResponse)
@@ -2837,7 +2837,7 @@ func (c *Client) RemoveOrgUser(ctx context.Context, options *RemoveOrgUserReques
 			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
 				runtime.WithStatusCode(resp.StatusCode))
 		}
-		target := new(struct{})
+		target := new(RemoveOrgUserResponse)
 		if err = json.Unmarshal(bodyBytes, target); err != nil {
 			err = fmt.Errorf("error decoding response: %w", err)
 			return nil, err
