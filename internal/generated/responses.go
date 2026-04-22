@@ -323,6 +323,39 @@ type CreateProjectResponse = ProjectResponse
 
 type CreateProjectErrorResponse = BadRequest
 
+type ListOrgUsersResponse = OrgUserListResponse
+
+type ListOrgUsersErrorResponse = Unauthorized
+
+// GetOrgUserResponse Detailed org user view returned by `GET /orgs/{org_id}/users/{org_user_id}`.
+type GetOrgUserResponse = OrgUserShowResponse
+
+type GetOrgUserErrorResponse = Unauthorized
+
+// UpdateOrgUserRoleResponse Response wrapping a single OrgUser under the `user` key.
+type UpdateOrgUserRoleResponse = OrgUserResponse
+
+type UpdateOrgUserRoleErrorResponse = BadRequest
+
+type RemoveOrgUserErrorResponse = Unauthorized
+
+// UpdateOrgUserProjectPermResponse Response wrapping an OrgUserProject under the `user` key.
+type UpdateOrgUserProjectPermResponse = OrgUserProjectResponse
+
+type UpdateOrgUserProjectPermErrorResponse = BadRequest
+
+type ListOrgInvitesResponse = UserInviteListResponse
+
+type ListOrgInvitesErrorResponse = Unauthorized
+
+type CreateOrgInviteResponse = UserInviteResponse
+
+type CreateOrgInviteErrorResponse = BadRequest
+
+type CancelOrgInviteResponse = UserInviteResponse
+
+type CancelOrgInviteErrorResponse = Unauthorized
+
 type ListTeamsResponse struct {
 	Teams []Team `json:"teams" validate:"required"`
 }
@@ -376,6 +409,11 @@ type AddTeamUserErrorResponse = Unauthorized
 type RemoveTeamUserResponse = EmptyResponse
 
 type RemoveTeamUserErrorResponse = Unauthorized
+
+// JoinOrgResponse Response from accepting an invitation. Contains `resetPasswordToken` only when the user had no password set prior to acceptance; otherwise the server returns an empty body (decode as an empty object).
+type JoinOrgResponse = JoinResponse
+
+type JoinOrgErrorResponse = BadRequest
 
 type GetProjectResponse = ProjectResponse
 
