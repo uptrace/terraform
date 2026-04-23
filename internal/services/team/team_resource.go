@@ -120,10 +120,6 @@ func (r *TeamResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Body:       body,
 	})
 	if err != nil {
-		if client.IsLicenseRequired(err) {
-			tfutil.AddLicenseRequiredError(&resp.Diagnostics, err)
-			return
-		}
 		tfutil.AddAPIError(&resp.Diagnostics, "create team failed", err)
 		return
 	}
@@ -156,10 +152,6 @@ func (r *TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if err != nil {
 		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
-			return
-		}
-		if client.IsLicenseRequired(err) {
-			tfutil.AddLicenseRequiredError(&resp.Diagnostics, err)
 			return
 		}
 		tfutil.AddAPIError(&resp.Diagnostics, "read team failed", err)
@@ -202,10 +194,6 @@ func (r *TeamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		Body:       body,
 	})
 	if err != nil {
-		if client.IsLicenseRequired(err) {
-			tfutil.AddLicenseRequiredError(&resp.Diagnostics, err)
-			return
-		}
 		tfutil.AddAPIError(&resp.Diagnostics, "update team failed", err)
 		return
 	}
@@ -238,10 +226,6 @@ func (r *TeamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		PathParams: &generated.DeleteTeamPath{OrgID: orgID, TeamID: teamID},
 	})
 	if err != nil && !tfutil.IsDeleteGone(err) {
-		if client.IsLicenseRequired(err) {
-			tfutil.AddLicenseRequiredError(&resp.Diagnostics, err)
-			return
-		}
 		tfutil.AddAPIError(&resp.Diagnostics, "delete team failed", err)
 	}
 }
