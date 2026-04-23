@@ -110,7 +110,11 @@ func (r *TeamProjectResource) Create(ctx context.Context, req resource.CreateReq
 		Body: &generated.TeamProjectAddRequest{},
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("add team project failed", err.Error())
+		if client.IsLicenseRequired(err) {
+			tfutil.AddLicenseRequiredError(&resp.Diagnostics, err)
+			return
+		}
+		tfutil.AddAPIError(&resp.Diagnostics, "add team project failed", err)
 		return
 	}
 
@@ -136,11 +140,15 @@ func (r *TeamProjectResource) Read(ctx context.Context, req resource.ReadRequest
 	})
 	if err != nil {
 		// Parent team (or org) is gone — the membership is implicitly gone too.
-		if client.IsNotFound(err) || client.IsForbidden(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("list team projects failed", err.Error())
+		if client.IsLicenseRequired(err) {
+			tfutil.AddLicenseRequiredError(&resp.Diagnostics, err)
+			return
+		}
+		tfutil.AddAPIError(&resp.Diagnostics, "list team projects failed", err)
 		return
 	}
 
@@ -191,8 +199,12 @@ func (r *TeamProjectResource) Delete(ctx context.Context, req resource.DeleteReq
 			ProjectID: projectID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("remove team project failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		if client.IsLicenseRequired(err) {
+			tfutil.AddLicenseRequiredError(&resp.Diagnostics, err)
+			return
+		}
+		tfutil.AddAPIError(&resp.Diagnostics, "remove team project failed", err)
 	}
 }
 

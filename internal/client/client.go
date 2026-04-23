@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
@@ -59,6 +60,44 @@ func IsNotFound(err error) bool {
 // IsForbidden reports whether err is an API 403 error.
 func IsForbidden(err error) bool {
 	return hasStatusCode(err, http.StatusForbidden)
+}
+
+// IsLicenseRequired reports whether err is a 403 returned by a Premium-gated
+// endpoint on an Uptrace backend that was built without the `billing` tag and
+// has no license key.
+func IsLicenseRequired(err error) bool {
+	if !IsForbidden(err) {
+		return false
+	}
+	apiErr, ok := apiError(err)
+	if !ok {
+		return false
+	}
+	return strings.Contains(strings.ToLower(apiErr.ErrorData.Message), "license")
+}
+
+// APIErrorMessage returns the server-side message from an API error, or
+// err.Error() otherwise. Needed because the generated Error.Error() is a
+// stub that returns "unmapped client error" for every API response.
+func APIErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	if apiErr, ok := apiError(err); ok && apiErr.ErrorData.Message != "" {
+		return apiErr.ErrorData.Message
+	}
+	return err.Error()
+}
+
+// apiError unwraps the ClientAPIError envelope to the decoded generated.Error
+// value. The runtime wraps the decoded error as a value (not pointer), so we
+// match on the value type.
+func apiError(err error) (generated.Error, bool) {
+	clientErr, ok := errors.AsType[*runtime.ClientAPIError](err)
+	if !ok {
+		return generated.Error{}, false
+	}
+	return errors.AsType[generated.Error](clientErr.Unwrap())
 }
 
 func hasStatusCode(err error, code int) bool {

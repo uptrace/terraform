@@ -37,6 +37,9 @@ resource "uptrace_org_user" "test" {
 `, orgName, email, role)
 }
 
+// testAccCheckOrgUserDestroy verifies that every uptrace_org_user in the
+// post-destroy state is gone from the backend. Under the invite-then-accept
+// model, a resource may end its life in one of two shapes:
 func testAccCheckOrgUserDestroy(t *testing.T) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		c := testutil.TestAccClient(t)
@@ -48,28 +51,53 @@ func testAccCheckOrgUserDestroy(t *testing.T) resource.TestCheckFunc {
 			if err != nil {
 				return fmt.Errorf("invalid org_id %q: %w", rs.Primary.Attributes["org_id"], err)
 			}
-			orgUserID, err := strconv.ParseUint(rs.Primary.ID, 10, 64)
-			if err != nil {
-				return fmt.Errorf("invalid org_user_id %q: %w", rs.Primary.ID, err)
+
+			if ouID := rs.Primary.Attributes["org_user_id"]; ouID != "" {
+				orgUserID, err := strconv.ParseUint(ouID, 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid org_user_id %q: %w", ouID, err)
+				}
+				_, err = c.API.GetOrgUser(context.Background(), &generated.GetOrgUserRequestOptions{
+					PathParams: &generated.GetOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
+				})
+				if err == nil {
+					return fmt.Errorf("org_user %d still exists after destroy", orgUserID)
+				}
+				if !client.IsNotFound(err) && !client.IsForbidden(err) {
+					return fmt.Errorf("checking org_user %d after destroy: %w", orgUserID, err)
+				}
 			}
-			_, err = c.API.GetOrgUser(context.Background(), &generated.GetOrgUserRequestOptions{
-				PathParams: &generated.GetOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
+
+			inviteID := rs.Primary.ID
+			out, err := c.API.ListOrgInvites(context.Background(), &generated.ListOrgInvitesRequestOptions{
+				PathParams: &generated.ListOrgInvitesPath{OrgID: orgID},
 			})
-			if err == nil {
-				return fmt.Errorf("org_user %d still exists after destroy", orgUserID)
+			if err != nil {
+				if client.IsNotFound(err) || client.IsForbidden(err) {
+					continue
+				}
+				return fmt.Errorf("listing invites after destroy: %w", err)
 			}
-			// Accept NotFound (user removed) and Forbidden (parent org
-			// gone, access denied) as successful destroys.
-			if !client.IsNotFound(err) && !client.IsForbidden(err) {
-				return fmt.Errorf("checking org_user %d after destroy: %w", orgUserID, err)
+			for i := range out.Invites {
+				if out.Invites[i].ID == inviteID && out.Invites[i].State == generated.Sent {
+					return fmt.Errorf("invite %q still in sent state after destroy", inviteID)
+				}
 			}
 		}
 		return nil
 	}
 }
 
+// TestAccOrgUser_basic exercises the full invite → accept → role-update →
+// import → destroy lifecycle. Step 3 simulates the invitee clicking the
+// emailed /join link by calling JoinOrg out-of-band; the subsequent refresh
+// is what transitions the resource from `sent` to `accepted` and populates
+// `org_user_id` / `user_id`.
 func TestAccOrgUser_basic(t *testing.T) {
 	email := accOrgUserEmail("basic")
+	config := testAccOrgUserConfig("acc-org-user-org", email, "member")
+	configAdmin := testAccOrgUserConfig("acc-org-user-org", email, "admin")
+	var inviteID string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.PreCheck(t) },
@@ -77,22 +105,33 @@ func TestAccOrgUser_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckOrgUserDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOrgUserConfig("acc-org-user-org", email, "member"),
+				Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("uptrace_org_user.test", "id"),
-					resource.TestCheckResourceAttrSet("uptrace_org_user.test", "org_id"),
-					resource.TestCheckResourceAttrSet("uptrace_org_user.test", "user_id"),
-					resource.TestCheckResourceAttrSet("uptrace_org_user.test", "invite_id"),
+					resource.TestCheckResourceAttr("uptrace_org_user.test", "state", "sent"),
+					resource.TestCheckNoResourceAttr("uptrace_org_user.test", "org_user_id"),
+					resource.TestCheckNoResourceAttr("uptrace_org_user.test", "user_id"),
 					resource.TestCheckResourceAttr("uptrace_org_user.test", "email", email),
+					resource.TestCheckResourceAttr("uptrace_org_user.test", "role", "member"),
+					testutil.CaptureAttr("uptrace_org_user.test", "id", &inviteID),
+				),
+			},
+			{
+				Config:   config,
+				PlanOnly: true,
+			},
+			{
+				PreConfig: func() { acceptInviteOutOfBand(t, &inviteID) },
+				Config:    config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("uptrace_org_user.test", "state", "accepted"),
+					resource.TestCheckResourceAttrSet("uptrace_org_user.test", "org_user_id"),
+					resource.TestCheckResourceAttrSet("uptrace_org_user.test", "user_id"),
 					resource.TestCheckResourceAttr("uptrace_org_user.test", "role", "member"),
 				),
 			},
 			{
-				Config:   testAccOrgUserConfig("acc-org-user-org", email, "member"),
-				PlanOnly: true,
-			},
-			{
-				Config: testAccOrgUserConfig("acc-org-user-org", email, "admin"),
+				Config: configAdmin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("uptrace_org_user.test", "role", "admin"),
 				),
@@ -101,9 +140,7 @@ func TestAccOrgUser_basic(t *testing.T) {
 				ResourceName:      "uptrace_org_user.test",
 				ImportState:       true,
 				ImportStateVerify: true,
-				// invite_id is Create-time only — not recoverable on import.
-				ImportStateVerifyIgnore: []string{"invite_id"},
-				ImportStateIdFunc:       orgUserImportStateIDFunc("uptrace_org_user.test"),
+				ImportStateIdFunc: orgUserImportStateIDFunc("uptrace_org_user.test"),
 			},
 		},
 	})
@@ -125,10 +162,35 @@ func TestAccOrgUser_mixedCaseEmailRejected(t *testing.T) {
 	})
 }
 
+// TestAccOrgUser_pendingDestroyCancelsInvite verifies that destroying a
+// resource that never reached `accepted` takes the CancelOrgInvite path.
+// The framework's end-of-test destroy + CheckDestroy covers the assertion.
+func TestAccOrgUser_pendingDestroyCancelsInvite(t *testing.T) {
+	email := accOrgUserEmail("pending")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.PreCheck(t) },
+		ProtoV6ProviderFactories: testutil.ProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckOrgUserDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOrgUserConfig("acc-org-user-pending-org", email, "member"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("uptrace_org_user.test", "state", "sent"),
+					resource.TestCheckNoResourceAttr("uptrace_org_user.test", "org_user_id"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccOrgUser_disappearsOutOfBand covers the accepted-member path: the
+// OrgUser is removed directly via the API while Terraform still holds state
+// for it, and the next apply is expected to re-invite and reconcile.
 func TestAccOrgUser_disappearsOutOfBand(t *testing.T) {
 	email := accOrgUserEmail("disappear")
 	config := testAccOrgUserConfig("acc-org-user-disappear-org", email, "member")
-	var orgID, orgUserID string
+	var orgID, inviteID, orgUserID string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.PreCheck(t) },
@@ -139,7 +201,15 @@ func TestAccOrgUser_disappearsOutOfBand(t *testing.T) {
 				Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testutil.CaptureAttr("uptrace_org_user.test", "org_id", &orgID),
-					testutil.CaptureAttr("uptrace_org_user.test", "id", &orgUserID),
+					testutil.CaptureAttr("uptrace_org_user.test", "id", &inviteID),
+				),
+			},
+			{
+				PreConfig: func() { acceptInviteOutOfBand(t, &inviteID) },
+				Config:    config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("uptrace_org_user.test", "state", "accepted"),
+					testutil.CaptureAttr("uptrace_org_user.test", "org_user_id", &orgUserID),
 				),
 			},
 			{
@@ -152,6 +222,22 @@ func TestAccOrgUser_disappearsOutOfBand(t *testing.T) {
 			},
 		},
 	})
+}
+
+// acceptInviteOutOfBand simulates the invitee clicking the emailed /join
+// link. The /join endpoint is public (no auth) and takes only the invite id.
+func acceptInviteOutOfBand(t *testing.T, inviteID *string) {
+	t.Helper()
+	if inviteID == nil || *inviteID == "" {
+		t.Fatal("invite id was not captured before accept")
+	}
+	c := testutil.TestAccClient(t)
+	_, err := c.API.JoinOrg(context.Background(), &generated.JoinOrgRequestOptions{
+		PathParams: &generated.JoinOrgPath{InviteID: *inviteID},
+	})
+	if err != nil {
+		t.Fatalf("accept invite %q out-of-band: %v", *inviteID, err)
+	}
 }
 
 func removeOrgUserOutOfBand(t *testing.T, orgIDStr, orgUserIDStr string) {

@@ -980,13 +980,45 @@ func (m MetricAttributeValue) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(m))
 }
 
+// ErrorDetail Machine-readable error code and human-readable message.
+type ErrorDetail struct {
+	// Code Short error code such as forbidden or not_found, or a field name for validation errors.
+	Code string `json:"code" jsonschema:"Short error code such as forbidden or not_found, or a field name for validation errors." validate:"required"`
+
+	// Message Human-readable explanation of what went wrong.
+	Message string `json:"message" jsonschema:"Human-readable explanation of what went wrong." validate:"required"`
+}
+
+func (e ErrorDetail) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(e))
+}
+
+// Error Uniform error envelope returned for every non-2xx response.
 type Error struct {
-	Code    string `json:"code" validate:"required"`
-	Message string `json:"message" validate:"required"`
+	// ErrorData Machine-readable error code and human-readable message.
+	ErrorData ErrorDetail `json:"error" jsonschema:"Machine-readable error code and human-readable message."`
+
+	// StatusCode HTTP status code; mirrors the response status line.
+	StatusCode int `json:"statusCode" jsonschema:"HTTP status code; mirrors the response status line." validate:"required"`
+
+	// TraceID Server-assigned trace ID useful for correlating logs.
+	TraceID *string `json:"traceId,omitempty" jsonschema:"Server-assigned trace ID useful for correlating logs."`
 }
 
 func (e Error) Validate() error {
-	return runtime.ConvertValidatorError(typesValidator.Struct(e))
+	var errors runtime.ValidationErrors
+	if v, ok := any(e.ErrorData).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("ErrorData", err)
+		}
+	}
+	if err := typesValidator.Var(e.StatusCode, "required"); err != nil {
+		errors = errors.Append("StatusCode", err)
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
 }
 
 func (s Error) Error() string {

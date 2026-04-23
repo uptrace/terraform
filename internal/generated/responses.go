@@ -2,14 +2,19 @@
 
 package generated
 
+// BadRequest Uniform error envelope returned for every non-2xx response.
 type BadRequest = Error
 
+// Unauthorized Uniform error envelope returned for every non-2xx response.
 type Unauthorized = Error
 
+// Forbidden Uniform error envelope returned for every non-2xx response.
 type Forbidden = Error
 
+// NotFound Uniform error envelope returned for every non-2xx response.
 type NotFound = Error
 
+// InternalError Uniform error envelope returned for every non-2xx response.
 type InternalError = Error
 
 type CreateAnnotationErrorResponse = BadRequest

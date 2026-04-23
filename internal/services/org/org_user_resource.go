@@ -33,13 +33,14 @@ type OrgUserResource struct {
 }
 
 type orgUserModel struct {
-	ID       types.String `tfsdk:"id"`
-	OrgID    types.String `tfsdk:"org_id"`
-	Email    types.String `tfsdk:"email"`
-	Role     types.String `tfsdk:"role"`
-	TeamID   types.String `tfsdk:"team_id"`
-	UserID   types.String `tfsdk:"user_id"`
-	InviteID types.String `tfsdk:"invite_id"`
+	ID        types.String `tfsdk:"id"`
+	OrgID     types.String `tfsdk:"org_id"`
+	Email     types.String `tfsdk:"email"`
+	Role      types.String `tfsdk:"role"`
+	TeamID    types.String `tfsdk:"team_id"`
+	State     types.String `tfsdk:"state"`
+	OrgUserID types.String `tfsdk:"org_user_id"`
+	UserID    types.String `tfsdk:"user_id"`
 }
 
 func NewOrgUserResource() resource.Resource {
@@ -52,11 +53,11 @@ func (r *OrgUserResource) Metadata(_ context.Context, req resource.MetadataReque
 
 func (r *OrgUserResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages an organization user. On create, sends an invitation to the given email and auto-accepts it so the OrgUser row is materialized in a single apply. Role is mutable; email, org_id, and team_id force recreation.",
+		Description: "Sends an organization invitation. The invitation starts in `sent` state; the invitee materializes their OrgUser row by clicking the emailed link. Terraform then discovers the materialized row on the next refresh and populates `org_user_id`/`user_id`. If the invitee is already a member, the backend marks the invitation `accepted` immediately and the resource is populated in the same apply. Role is mutable only after acceptance; `email`, `org_id`, and `team_id` force recreation.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "OrgUser ID.",
+				Description: "Invitation ID (32-character hex). Stable across the invite and the resulting membership.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -84,28 +85,35 @@ func (r *OrgUserResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"role": schema.StringAttribute{
 				Required:    true,
-				Description: "Organization role: owner, admin, member, viewer, billing_manager, or collaborator.",
+				Description: "Organization role: owner, admin, member, viewer, billing_manager, or collaborator. Mutable only after the invitation is accepted.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(orgUserRoles...),
 				},
 			},
 			"team_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "Optional team to add the invitee to on acceptance. Only used during create; manage ongoing team membership with uptrace_team_user. Changing this forces recreation.",
+				Description: "Optional team to add the invitee to on acceptance. Manage ongoing team membership with uptrace_team_user. Changing this forces recreation.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"user_id": schema.StringAttribute{
+			"state": schema.StringAttribute{
 				Computed:    true,
-				Description: "Underlying User ID (distinct from OrgUser ID).",
+				Description: "Invitation lifecycle state: `sent`, `accepted`, `canceled`, or `expired`. `canceled` and `expired` invitations are removed from Terraform state on refresh.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"invite_id": schema.StringAttribute{
+			"org_user_id": schema.StringAttribute{
 				Computed:    true,
-				Description: "ID of the invitation used to materialize this OrgUser. Diagnostic only.",
+				Description: "ID of the materialized OrgUser row. Null while the invitation is `sent`; populated once the invitee accepts.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"user_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "Underlying User ID. Null while the invitation is `sent`; populated once the invitee accepts.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -156,36 +164,30 @@ func (r *OrgUserResource) Create(ctx context.Context, req resource.CreateRequest
 		Body:       inviteBody,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("create invite failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "create invite failed", err)
 		return
 	}
 
-	inviteID := inviteResp.Invite.ID
-	plan.InviteID = types.StringValue(inviteID)
+	invite := inviteResp.Invite
+	plan.ID = types.StringValue(invite.ID)
+	plan.State = types.StringValue(string(invite.State))
 
-	// If the invitee was already a member of this org, the server returns the
-	// invite with state=accepted and does not create a new OrgUser. We reuse
-	// the existing membership. Otherwise (state=sent) we immediately accept
-	// the invite to materialize the OrgUser.
-	if inviteResp.Invite.State != generated.Accepted {
-		tflog.Info(ctx, "accepting invite", map[string]any{"invite_id": inviteID})
-		if _, err := r.client.API.JoinOrg(ctx, &generated.JoinOrgRequestOptions{
-			PathParams: &generated.JoinOrgPath{InviteID: inviteID},
-		}); err != nil {
-			resp.Diagnostics.AddError("join org failed", err.Error())
+	// Already-a-member shortcut: the backend returns state=accepted with no
+	// email sent and the existing OrgUser row preserved. Populate immediately
+	// so the operator gets a complete resource in one apply.
+	if invite.State == generated.Accepted {
+		orgUser, err := r.findOrgUserByEmail(ctx, orgID, email)
+		if err != nil {
+			tfutil.AddAPIError(&resp.Diagnostics, "locate org user failed", err)
 			return
 		}
+		plan.OrgUserID = types.StringValue(strconv.FormatUint(orgUser.ID, 10))
+		plan.UserID = types.StringValue(strconv.FormatUint(orgUser.UserID, 10))
+		plan.Role = types.StringValue(string(orgUser.Role))
+	} else {
+		plan.OrgUserID = types.StringNull()
+		plan.UserID = types.StringNull()
 	}
-
-	orgUser, err := r.findOrgUserByEmail(ctx, orgID, email)
-	if err != nil {
-		resp.Diagnostics.AddError("locate org user failed", err.Error())
-		return
-	}
-
-	plan.ID = types.StringValue(strconv.FormatUint(orgUser.ID, 10))
-	plan.UserID = types.StringValue(strconv.FormatUint(orgUser.UserID, 10))
-	plan.Role = types.StringValue(string(orgUser.Role))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -202,7 +204,19 @@ func (r *OrgUserResource) Read(ctx context.Context, req resource.ReadRequest, re
 		resp.Diagnostics.AddError("invalid org_id", err.Error())
 		return
 	}
-	orgUserID, err := strconv.ParseUint(state.ID.ValueString(), 10, 64)
+
+	if !state.OrgUserID.IsNull() && state.OrgUserID.ValueString() != "" {
+		r.readAsMember(ctx, orgID, &state, resp)
+		return
+	}
+
+	r.readAsPending(ctx, orgID, &state, resp)
+}
+
+// readAsMember refreshes an accepted membership. The OrgUser row is the source
+// of truth; we don't re-fetch the invitation (once accepted it's decoupled).
+func (r *OrgUserResource) readAsMember(ctx context.Context, orgID uint64, state *orgUserModel, resp *resource.ReadResponse) {
+	orgUserID, err := strconv.ParseUint(state.OrgUserID.ValueString(), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError("invalid org_user_id", err.Error())
 		return
@@ -212,25 +226,78 @@ func (r *OrgUserResource) Read(ctx context.Context, req resource.ReadRequest, re
 		PathParams: &generated.GetOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
 	})
 	if err != nil {
-		if client.IsNotFound(err) || client.IsForbidden(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("read org user failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "read org user failed", err)
 		return
 	}
 
 	state.Role = types.StringValue(string(out.OrgUser.Role))
 	state.UserID = types.StringValue(strconv.FormatUint(out.OrgUser.UserID, 10))
 	state.Email = types.StringValue(out.User.Email)
+	state.State = types.StringValue(string(generated.Accepted))
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+// readAsPending refreshes an invitation that has not yet materialized an
+// OrgUser. It transitions the resource to "accepted" if the invitee joined
+// between applies, or removes it if the invitation was canceled or expired.
+func (r *OrgUserResource) readAsPending(ctx context.Context, orgID uint64, state *orgUserModel, resp *resource.ReadResponse) {
+	invite, err := r.findInviteByID(ctx, orgID, state.ID.ValueString())
+	if err != nil {
+		tfutil.AddAPIError(&resp.Diagnostics, "read invitation failed", err)
+		return
+	}
+	if invite == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	switch invite.State {
+	case generated.Canceled, generated.Expired:
+		resp.State.RemoveResource(ctx)
+		return
+	case generated.Sent:
+		state.State = types.StringValue(string(invite.State))
+		state.Email = types.StringValue(invite.Email)
+		state.Role = types.StringValue(string(invite.Role))
+		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+		return
+	case generated.Accepted:
+		orgUser, err := r.findOrgUserByEmail(ctx, orgID, invite.Email)
+		if err != nil {
+			tfutil.AddAPIError(&resp.Diagnostics, "locate org user after acceptance failed", err)
+			return
+		}
+		state.State = types.StringValue(string(generated.Accepted))
+		state.Email = types.StringValue(invite.Email)
+		state.OrgUserID = types.StringValue(strconv.FormatUint(orgUser.ID, 10))
+		state.UserID = types.StringValue(strconv.FormatUint(orgUser.UserID, 10))
+		state.Role = types.StringValue(string(orgUser.Role))
+		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+		return
+	default:
+		resp.Diagnostics.AddError("unknown invitation state", fmt.Sprintf("got %q", invite.State))
+	}
 }
 
 func (r *OrgUserResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan orgUserModel
+	var plan, state orgUserModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if state.OrgUserID.IsNull() || state.OrgUserID.ValueString() == "" {
+		resp.Diagnostics.AddError(
+			"cannot update role while invitation is pending",
+			"The invitee has not yet accepted the invitation, so there is no OrgUser row to update. "+
+				"Wait for acceptance, or taint the resource to cancel the invite and re-invite with the new role.",
+		)
 		return
 	}
 
@@ -239,13 +306,13 @@ func (r *OrgUserResource) Update(ctx context.Context, req resource.UpdateRequest
 		resp.Diagnostics.AddError("invalid org_id", err.Error())
 		return
 	}
-	orgUserID, err := strconv.ParseUint(plan.ID.ValueString(), 10, 64)
+	orgUserID, err := strconv.ParseUint(state.OrgUserID.ValueString(), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError("invalid org_user_id", err.Error())
 		return
 	}
 
-	tflog.Info(ctx, "updating org user role", map[string]any{"id": plan.ID.ValueString()})
+	tflog.Info(ctx, "updating org user role", map[string]any{"org_user_id": state.OrgUserID.ValueString()})
 
 	// The backend's UpdateUserRole handler currently returns the pre-update
 	// OrgUser (no RETURNING clause on its SQL UPDATE), so we cannot trust the
@@ -257,9 +324,15 @@ func (r *OrgUserResource) Update(ctx context.Context, req resource.UpdateRequest
 			Role: generated.UserRole(plan.Role.ValueString()),
 		},
 	}); err != nil {
-		resp.Diagnostics.AddError("update org user role failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "update org user role failed", err)
 		return
 	}
+
+	// Preserve computed fields from state; only Role may have changed.
+	plan.ID = state.ID
+	plan.State = state.State
+	plan.OrgUserID = state.OrgUserID
+	plan.UserID = state.UserID
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -276,28 +349,42 @@ func (r *OrgUserResource) Delete(ctx context.Context, req resource.DeleteRequest
 		resp.Diagnostics.AddError("invalid org_id", err.Error())
 		return
 	}
-	orgUserID, err := strconv.ParseUint(state.ID.ValueString(), 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("invalid org_user_id", err.Error())
+
+	// If the invitation was accepted, remove the OrgUser. The backend
+	// cascade-cancels any lingering invitations for that email in the same
+	// org (see app/core/org_handler.go:425-451), so we don't need a second
+	// call. Otherwise, cancel the invitation directly.
+	if !state.OrgUserID.IsNull() && state.OrgUserID.ValueString() != "" {
+		orgUserID, err := strconv.ParseUint(state.OrgUserID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("invalid org_user_id", err.Error())
+			return
+		}
+		tflog.Info(ctx, "removing org user", map[string]any{"org_user_id": state.OrgUserID.ValueString()})
+		_, err = r.client.API.RemoveOrgUser(ctx, &generated.RemoveOrgUserRequestOptions{
+			PathParams: &generated.RemoveOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
+		})
+		if err != nil && !tfutil.IsDeleteGone(err) {
+			tfutil.AddAPIError(&resp.Diagnostics, "remove org user failed", err)
+		}
 		return
 	}
 
-	tflog.Info(ctx, "removing org user", map[string]any{"id": state.ID.ValueString()})
-
-	_, err = r.client.API.RemoveOrgUser(ctx, &generated.RemoveOrgUserRequestOptions{
-		PathParams: &generated.RemoveOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
+	tflog.Info(ctx, "canceling invitation", map[string]any{"invite_id": state.ID.ValueString()})
+	_, err = r.client.API.CancelOrgInvite(ctx, &generated.CancelOrgInviteRequestOptions{
+		PathParams: &generated.CancelOrgInvitePath{OrgID: orgID, InviteID: state.ID.ValueString()},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("remove org user failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&resp.Diagnostics, "cancel invitation failed", err)
 	}
 }
 
-// ImportState accepts "<org_id>:<org_user_id>". Email and role are populated
-// from the API on the subsequent Read.
+// ImportState accepts "<org_id>:<invite_id>". All other attributes are
+// populated from the API on the subsequent Read.
 func (r *OrgUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	tfutil.ImportStateCompoundID(ctx, req, resp,
 		tfutil.ImportField{Name: "org_id", Parse: tfutil.ParseUint64},
-		tfutil.ImportField{Name: "org_user_id", Parse: tfutil.ParseUint64},
+		tfutil.ImportField{Name: "invite_id"},
 	)
 }
 
@@ -330,9 +417,9 @@ func (lowercaseEmailValidator) ValidateString(_ context.Context, req validator.S
 	}
 }
 
-// findOrgUserByEmail locates a freshly-created OrgUser after the invite+join
-// chain. The list endpoint matches email as a case-insensitive substring, so
-// we filter exact equality client-side and assert exactly one match.
+// findOrgUserByEmail locates a freshly-created OrgUser after acceptance. The
+// list endpoint matches email as a case-insensitive substring, so we filter
+// exact equality client-side and assert exactly one match.
 func (r *OrgUserResource) findOrgUserByEmail(ctx context.Context, orgID uint64, email string) (*generated.OrgUserDetail, error) {
 	out, err := r.client.API.ListOrgUsers(ctx, &generated.ListOrgUsersRequestOptions{
 		PathParams: &generated.ListOrgUsersPath{OrgID: orgID},
@@ -366,4 +453,25 @@ func (r *OrgUserResource) findOrgUserByEmail(ctx context.Context, orgID uint64, 
 			"got %d (ids=%v) — DB unique constraint may have been violated",
 			email, len(matches), ids)
 	}
+}
+
+// findInviteByID looks up an invitation by its hex ID. The backend has no
+// GetOrgInvite endpoint, so we list all invitations for the org and filter
+// client-side. Returns nil (not an error) when the invitation is absent.
+func (r *OrgUserResource) findInviteByID(ctx context.Context, orgID uint64, inviteID string) (*generated.UserInvite, error) {
+	out, err := r.client.API.ListOrgInvites(ctx, &generated.ListOrgInvitesRequestOptions{
+		PathParams: &generated.ListOrgInvitesPath{OrgID: orgID},
+	})
+	if err != nil {
+		if tfutil.IsDeleteGone(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	for i := range out.Invites {
+		if out.Invites[i].ID == inviteID {
+			return &out.Invites[i], nil
+		}
+	}
+	return nil, nil
 }
