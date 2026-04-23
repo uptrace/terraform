@@ -15,10 +15,11 @@ func (Registration) Name() string {
 func (Registration) Resources() []func() resource.Resource {
 	return []func() resource.Resource{
 		NewOrgResource,
-		NewOrgUserResource,
 	}
 }
 
 func (Registration) DataSources() []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		NewOrgUserDataSource,
+	}
 }

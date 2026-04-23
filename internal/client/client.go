@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
@@ -60,20 +59,6 @@ func IsNotFound(err error) bool {
 // IsForbidden reports whether err is an API 403 error.
 func IsForbidden(err error) bool {
 	return hasStatusCode(err, http.StatusForbidden)
-}
-
-// IsLicenseRequired reports whether err is a 403 returned by a Premium-gated
-// endpoint on an Uptrace backend that was built without the `billing` tag and
-// has no license key.
-func IsLicenseRequired(err error) bool {
-	if !IsForbidden(err) {
-		return false
-	}
-	apiErr, ok := apiError(err)
-	if !ok {
-		return false
-	}
-	return strings.Contains(strings.ToLower(apiErr.ErrorData.Message), "license")
 }
 
 // APIErrorMessage returns the server-side message from an API error, or
