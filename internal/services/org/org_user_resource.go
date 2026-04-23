@@ -173,20 +173,22 @@ func (r *OrgUserResource) Create(ctx context.Context, req resource.CreateRequest
 	plan.State = types.StringValue(string(invite.State))
 
 	// Already-a-member shortcut: the backend returns state=accepted with no
-	// email sent and the existing OrgUser row preserved. Populate immediately
-	// so the operator gets a complete resource in one apply.
+	// email sent and the existing OrgUser row preserved. If the row isn't
+	// visible yet (eventual consistency), leave OrgUserID/UserID null — the
+	// next Read will find it and reconcile via the pending branch.
+	plan.OrgUserID = types.StringNull()
+	plan.UserID = types.StringNull()
 	if invite.State == generated.Accepted {
 		orgUser, err := r.findOrgUserByEmail(ctx, orgID, email)
 		if err != nil {
 			tfutil.AddAPIError(&resp.Diagnostics, "locate org user failed", err)
 			return
 		}
-		plan.OrgUserID = types.StringValue(strconv.FormatUint(orgUser.ID, 10))
-		plan.UserID = types.StringValue(strconv.FormatUint(orgUser.UserID, 10))
-		plan.Role = types.StringValue(string(orgUser.Role))
-	} else {
-		plan.OrgUserID = types.StringNull()
-		plan.UserID = types.StringNull()
+		if orgUser != nil {
+			plan.OrgUserID = types.StringValue(strconv.FormatUint(orgUser.ID, 10))
+			plan.UserID = types.StringValue(strconv.FormatUint(orgUser.UserID, 10))
+			plan.Role = types.StringValue(string(orgUser.Role))
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -274,9 +276,15 @@ func (r *OrgUserResource) readAsPending(ctx context.Context, orgID uint64, state
 		}
 		state.State = types.StringValue(string(generated.Accepted))
 		state.Email = types.StringValue(invite.Email)
-		state.OrgUserID = types.StringValue(strconv.FormatUint(orgUser.ID, 10))
-		state.UserID = types.StringValue(strconv.FormatUint(orgUser.UserID, 10))
-		state.Role = types.StringValue(string(orgUser.Role))
+		// If the OrgUser row isn't visible yet, leave ids null so the next
+		// refresh retries rather than failing the apply.
+		if orgUser != nil {
+			state.OrgUserID = types.StringValue(strconv.FormatUint(orgUser.ID, 10))
+			state.UserID = types.StringValue(strconv.FormatUint(orgUser.UserID, 10))
+			state.Role = types.StringValue(string(orgUser.Role))
+		} else {
+			state.Role = types.StringValue(string(invite.Role))
+		}
 		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 		return
 	default:
@@ -314,10 +322,6 @@ func (r *OrgUserResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	tflog.Info(ctx, "updating org user role", map[string]any{"org_user_id": state.OrgUserID.ValueString()})
 
-	// The backend's UpdateUserRole handler currently returns the pre-update
-	// OrgUser (no RETURNING clause on its SQL UPDATE), so we cannot trust the
-	// response's role. If the API call succeeds, the planned role is what was
-	// written; refresh by a subsequent Read if you need a server confirmation.
 	if _, err := r.client.API.UpdateOrgUserRole(ctx, &generated.UpdateOrgUserRoleRequestOptions{
 		PathParams: &generated.UpdateOrgUserRolePath{OrgID: orgID, OrgUserID: orgUserID},
 		Body: &generated.OrgUserRoleUpdateRequest{
@@ -328,11 +332,23 @@ func (r *OrgUserResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Preserve computed fields from state; only Role may have changed.
+	// UpdateOrgUserRole returns the pre-update row (no RETURNING clause on the
+	// SQL UPDATE), so GetOrgUser is the only way to observe the post-update
+	// role. Without this, a backend that accepts the call but silently refuses
+	// the change would leave state out of sync until the next plan.
+	out, err := r.client.API.GetOrgUser(ctx, &generated.GetOrgUserRequestOptions{
+		PathParams: &generated.GetOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
+	})
+	if err != nil {
+		tfutil.AddAPIError(&resp.Diagnostics, "confirm org user role failed", err)
+		return
+	}
+
 	plan.ID = state.ID
 	plan.State = state.State
 	plan.OrgUserID = state.OrgUserID
-	plan.UserID = state.UserID
+	plan.UserID = types.StringValue(strconv.FormatUint(out.OrgUser.UserID, 10))
+	plan.Role = types.StringValue(string(out.OrgUser.Role))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -350,17 +366,32 @@ func (r *OrgUserResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	// If the invitation was accepted, remove the OrgUser. The backend
-	// cascade-cancels any lingering invitations for that email in the same
-	// org (see app/core/org_handler.go:425-451), so we don't need a second
-	// call. Otherwise, cancel the invitation directly.
-	if !state.OrgUserID.IsNull() && state.OrgUserID.ValueString() != "" {
-		orgUserID, err := strconv.ParseUint(state.OrgUserID.ValueString(), 10, 64)
+	// Resolve the effective OrgUserID at destroy-time. If state shows the
+	// invitation as still pending, probe by email to catch a plan→apply
+	// race where the invitee accepted since the last refresh — the backend's
+	// CancelOrgInvite force-transitions any state to canceled and would
+	// orphan the just-materialized OrgUser row if we took that path blindly.
+	orgUserIDStr := state.OrgUserID.ValueString()
+	if (state.OrgUserID.IsNull() || orgUserIDStr == "") && state.Email.ValueString() != "" {
+		orgUser, err := r.findOrgUserByEmail(ctx, orgID, state.Email.ValueString())
+		if err != nil {
+			tfutil.AddAPIError(&resp.Diagnostics, "probe org user before destroy failed", err)
+			return
+		}
+		if orgUser != nil {
+			orgUserIDStr = strconv.FormatUint(orgUser.ID, 10)
+		}
+	}
+
+	if orgUserIDStr != "" {
+		orgUserID, err := strconv.ParseUint(orgUserIDStr, 10, 64)
 		if err != nil {
 			resp.Diagnostics.AddError("invalid org_user_id", err.Error())
 			return
 		}
-		tflog.Info(ctx, "removing org user", map[string]any{"org_user_id": state.OrgUserID.ValueString()})
+		tflog.Info(ctx, "removing org user", map[string]any{"org_user_id": orgUserIDStr})
+		// RemoveOrgUser cascade-cancels any lingering invitations for the
+		// same email (see app/core/org_handler.go:425-451).
 		_, err = r.client.API.RemoveOrgUser(ctx, &generated.RemoveOrgUserRequestOptions{
 			PathParams: &generated.RemoveOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
 		})
@@ -417,9 +448,11 @@ func (lowercaseEmailValidator) ValidateString(_ context.Context, req validator.S
 	}
 }
 
-// findOrgUserByEmail locates a freshly-created OrgUser after acceptance. The
-// list endpoint matches email as a case-insensitive substring, so we filter
-// exact equality client-side and assert exactly one match.
+// findOrgUserByEmail locates an OrgUser by email via case-insensitive
+// substring match then client-side exact filter. Returns (nil, nil) when no
+// match exists so callers can treat it as "not yet visible" (eventual
+// consistency) rather than a hard error. Multi-match is a unique-email
+// invariant violation and returns an error.
 func (r *OrgUserResource) findOrgUserByEmail(ctx context.Context, orgID uint64, email string) (*generated.OrgUserDetail, error) {
 	out, err := r.client.API.ListOrgUsers(ctx, &generated.ListOrgUsersRequestOptions{
 		PathParams: &generated.ListOrgUsersPath{OrgID: orgID},
@@ -441,9 +474,7 @@ func (r *OrgUserResource) findOrgUserByEmail(ctx context.Context, orgID uint64, 
 	case 1:
 		return matches[0], nil
 	case 0:
-		return nil, fmt.Errorf("no org user with email %q found after invite "+
-			"(ListOrgUsers returned %d rows matching as substring)",
-			email, len(out.Users))
+		return nil, nil
 	default:
 		ids := make([]uint64, len(matches))
 		for i, m := range matches {
