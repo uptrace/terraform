@@ -69,10 +69,14 @@ func (r *OrgUserResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"email": schema.StringAttribute{
-				Required:    true,
-				Description: "Email address used to invite the user. Changing this forces recreation.",
+				Required: true,
+				Description: "Email address used to invite the user. Must be lowercase " +
+					"and trimmed; the server normalizes emails on insert, so storing " +
+					"a mixed-case value in config would cause a perpetual diff. " +
+					"Changing this forces recreation.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(3),
+					lowercaseEmailValidator{},
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -297,9 +301,38 @@ func (r *OrgUserResource) ImportState(ctx context.Context, req resource.ImportSt
 	)
 }
 
+// lowercaseEmailValidator rejects non-normalized email input at plan time to
+// avoid a perpetual diff against server-normalized state (email is RequiresReplace).
+type lowercaseEmailValidator struct{}
+
+func (lowercaseEmailValidator) Description(context.Context) string {
+	return "email must be lowercase and trimmed"
+}
+
+func (v lowercaseEmailValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (lowercaseEmailValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	raw := req.ConfigValue.ValueString()
+	normalized := strings.ToLower(strings.TrimSpace(raw))
+	if raw != normalized {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"email must be lowercase and trimmed",
+			fmt.Sprintf("got %q; write %q instead. "+
+				"The backend lowercases emails, so mixed-case input would cause "+
+				"a perpetual diff against state.", raw, normalized),
+		)
+	}
+}
+
 // findOrgUserByEmail locates a freshly-created OrgUser after the invite+join
 // chain. The list endpoint matches email as a case-insensitive substring, so
-// we filter exact equality client-side.
+// we filter exact equality client-side and assert exactly one match.
 func (r *OrgUserResource) findOrgUserByEmail(ctx context.Context, orgID uint64, email string) (*generated.OrgUserDetail, error) {
 	out, err := r.client.API.ListOrgUsers(ctx, &generated.ListOrgUsersRequestOptions{
 		PathParams: &generated.ListOrgUsersPath{OrgID: orgID},
@@ -308,12 +341,29 @@ func (r *OrgUserResource) findOrgUserByEmail(ctx context.Context, orgID uint64, 
 	if err != nil {
 		return nil, err
 	}
+
 	lower := strings.ToLower(email)
+	var matches []*generated.OrgUserDetail
 	for i := range out.Users {
-		u := out.Users[i]
-		if strings.ToLower(u.Email) == lower {
-			return &u, nil
+		if strings.ToLower(out.Users[i].Email) == lower {
+			matches = append(matches, &out.Users[i])
 		}
 	}
-	return nil, fmt.Errorf("no org user with email %q found after invite", email)
+
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return nil, fmt.Errorf("no org user with email %q found after invite "+
+			"(ListOrgUsers returned %d rows matching as substring)",
+			email, len(out.Users))
+	default:
+		ids := make([]uint64, len(matches))
+		for i, m := range matches {
+			ids[i] = m.ID
+		}
+		return nil, fmt.Errorf("expected exactly 1 org user with email %q, "+
+			"got %d (ids=%v) — DB unique constraint may have been violated",
+			email, len(matches), ids)
+	}
 }

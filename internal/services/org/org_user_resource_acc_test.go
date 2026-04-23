@@ -3,6 +3,7 @@ package org_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -103,6 +104,22 @@ func TestAccOrgUser_basic(t *testing.T) {
 				// invite_id is Create-time only — not recoverable on import.
 				ImportStateVerifyIgnore: []string{"invite_id"},
 				ImportStateIdFunc:       orgUserImportStateIDFunc("uptrace_org_user.test"),
+			},
+		},
+	})
+}
+
+func TestAccOrgUser_mixedCaseEmailRejected(t *testing.T) {
+	mixed := fmt.Sprintf("Acc-Org-User-Mixed-%d@Example.com", time.Now().UnixNano())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.PreCheck(t) },
+		ProtoV6ProviderFactories: testutil.ProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckOrgUserDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccOrgUserConfig("acc-org-user-mixed-org", mixed, "member"),
+				ExpectError: regexp.MustCompile(`email must be lowercase and trimmed`),
 			},
 		},
 	})
