@@ -131,6 +131,10 @@ func TestAccOrgUser_basic(t *testing.T) {
 				),
 			},
 			{
+				Config:   config,
+				PlanOnly: true,
+			},
+			{
 				Config: configAdmin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("uptrace_org_user.test", "role", "admin"),

@@ -346,7 +346,7 @@ func (r *OrgUserResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	plan.ID = state.ID
 	plan.State = state.State
-	plan.OrgUserID = state.OrgUserID
+	plan.OrgUserID = types.StringValue(strconv.FormatUint(out.OrgUser.ID, 10))
 	plan.UserID = types.StringValue(strconv.FormatUint(out.OrgUser.UserID, 10))
 	plan.Role = types.StringValue(string(out.OrgUser.Role))
 
@@ -372,7 +372,7 @@ func (r *OrgUserResource) Delete(ctx context.Context, req resource.DeleteRequest
 	// CancelOrgInvite force-transitions any state to canceled and would
 	// orphan the just-materialized OrgUser row if we took that path blindly.
 	orgUserIDStr := state.OrgUserID.ValueString()
-	if (state.OrgUserID.IsNull() || orgUserIDStr == "") && state.Email.ValueString() != "" {
+	if orgUserIDStr == "" && state.Email.ValueString() != "" {
 		orgUser, err := r.findOrgUserByEmail(ctx, orgID, state.Email.ValueString())
 		if err != nil {
 			tfutil.AddAPIError(&resp.Diagnostics, "probe org user before destroy failed", err)
