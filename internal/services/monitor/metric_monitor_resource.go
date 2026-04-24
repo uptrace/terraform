@@ -101,7 +101,7 @@ func (r *MetricMonitorResource) Create(ctx context.Context, req resource.CreateR
 		Body:       body,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("create monitor failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "create monitor failed", err)
 		return
 	}
 
@@ -138,11 +138,11 @@ func (r *MetricMonitorResource) Read(ctx context.Context, req resource.ReadReque
 		},
 	})
 	if err != nil {
-		if client.IsNotFound(err) || client.IsForbidden(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("read monitor failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "read monitor failed", err)
 		return
 	}
 
@@ -188,7 +188,7 @@ func (r *MetricMonitorResource) Update(ctx context.Context, req resource.UpdateR
 		Body: body,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("update monitor failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "update monitor failed", err)
 		return
 	}
 
@@ -226,8 +226,8 @@ func (r *MetricMonitorResource) Delete(ctx context.Context, req resource.DeleteR
 			MonitorID: monitorID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("delete monitor failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&resp.Diagnostics, "delete monitor failed", err)
 	}
 }
 

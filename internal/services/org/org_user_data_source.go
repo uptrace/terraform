@@ -57,9 +57,10 @@ func (d *OrgUserDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			},
 			"email": schema.StringAttribute{
 				Required:    true,
-				Description: "Email address of the organization user. Matched case-insensitively against the server's normalized (lowercased, trimmed) value.",
+				Description: "Email address of the organization user. Must be lowercase and trimmed to match the server-normalized value.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(3),
+					lowercaseEmailValidator{},
 				},
 			},
 			"user_id": schema.StringAttribute{
@@ -138,6 +139,35 @@ func (d *OrgUserDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			"multiple org users matched email",
 			fmt.Sprintf("expected exactly 1 org user with email %q, got %d (ids=%v)",
 				email, len(matches), ids),
+		)
+	}
+}
+
+// lowercaseEmailValidator rejects non-normalized email input at plan time to
+// avoid drift against server-normalized state.
+type lowercaseEmailValidator struct{}
+
+func (lowercaseEmailValidator) Description(context.Context) string {
+	return "email must be lowercase and trimmed"
+}
+
+func (v lowercaseEmailValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (lowercaseEmailValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	raw := req.ConfigValue.ValueString()
+	normalized := strings.ToLower(strings.TrimSpace(raw))
+	if raw != normalized {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"email must be lowercase and trimmed",
+			fmt.Sprintf("got %q; write %q instead. "+
+				"The backend lowercases emails, so mixed-case input would cause "+
+				"a perpetual diff against state.", raw, normalized),
 		)
 	}
 }
