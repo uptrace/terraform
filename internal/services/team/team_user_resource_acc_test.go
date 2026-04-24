@@ -74,7 +74,7 @@ func testAccCheckTeamUserDestroy(t *testing.T) resource.TestCheckFunc {
 				PathParams: &generated.ListTeamUsersPath{OrgID: orgID, TeamID: teamID},
 			})
 			if err != nil {
-				if client.IsNotFound(err) || client.IsForbidden(err) {
+				if client.IsNotFound(err) {
 					continue
 				}
 				return fmt.Errorf("list team users after destroy: %w", err)
@@ -176,7 +176,7 @@ func removeTeamUserOutOfBand(t *testing.T, orgIDStr, teamIDStr, orgUserIDStr str
 			OrgUserID: orgUserID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("remove team user out-of-band: %v", err)
 	}
 }

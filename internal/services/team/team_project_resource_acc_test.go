@@ -66,7 +66,7 @@ func testAccCheckTeamProjectDestroy(t *testing.T) resource.TestCheckFunc {
 				PathParams: &generated.ListTeamProjectsPath{OrgID: orgID, TeamID: teamID},
 			})
 			if err != nil {
-				if client.IsNotFound(err) || client.IsForbidden(err) {
+				if client.IsNotFound(err) {
 					continue
 				}
 				return fmt.Errorf("list team projects after destroy: %w", err)
@@ -167,7 +167,7 @@ func removeTeamProjectOutOfBand(t *testing.T, orgIDStr, teamIDStr, projectIDStr 
 			ProjectID: uint32(pid64),
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("remove team project out-of-band: %v", err)
 	}
 }

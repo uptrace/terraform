@@ -40,7 +40,7 @@ func testAccCheckChannelDestroy(t *testing.T, resourceType string) resource.Test
 			if err == nil {
 				return fmt.Errorf("notification channel %s still exists after destroy", rs.Primary.ID)
 			}
-			if !client.IsNotFound(err) && !client.IsForbidden(err) {
+			if !client.IsNotFound(err) {
 				return fmt.Errorf("checking notification channel %s after destroy: %w", rs.Primary.ID, err)
 			}
 		}
@@ -69,7 +69,7 @@ func deleteChannelOutOfBand(t *testing.T, projectIDStr, channelIDStr string) {
 			ChannelID: channelID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("delete channel %d out-of-band: %v", channelID, err)
 	}
 }

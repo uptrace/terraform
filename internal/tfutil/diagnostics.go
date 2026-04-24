@@ -1,8 +1,6 @@
 package tfutil
 
 import (
-	"strings"
-
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 
 	"github.com/uptrace/terraform/internal/client"
@@ -15,15 +13,10 @@ func AddAPIError(diags *diag.Diagnostics, summary string, err error) {
 	diags.AddError(summary, client.APIErrorMessage(err))
 }
 
-// IsDeleteGone reports whether a Delete-time error means the resource is
-// already gone. A 403 whose server message mentions "license" is excluded so
-// a backend downgrade surfaces instead of being swallowed.
+// IsDeleteGone reports whether an API error means the resource is already
+// gone. The backend returns 404 for absent or out-of-scope resources, so a
+// 403 now unambiguously means action denied on an existing resource and
+// should surface as an error rather than be swallowed here.
 func IsDeleteGone(err error) bool {
-	if client.IsNotFound(err) {
-		return true
-	}
-	if !client.IsForbidden(err) {
-		return false
-	}
-	return !strings.Contains(strings.ToLower(client.APIErrorMessage(err)), "license")
+	return client.IsNotFound(err)
 }

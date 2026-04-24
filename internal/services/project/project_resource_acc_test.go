@@ -59,7 +59,7 @@ func testAccCheckProjectDestroy(t *testing.T) resource.TestCheckFunc {
 			if err == nil {
 				return fmt.Errorf("project %s still exists after destroy", rs.Primary.ID)
 			}
-			if !client.IsNotFound(err) && !client.IsForbidden(err) {
+			if !client.IsNotFound(err) {
 				return fmt.Errorf("checking project %s after destroy: %w", rs.Primary.ID, err)
 			}
 		}
@@ -194,7 +194,7 @@ func deleteProjectOutOfBand(t *testing.T, projectID string) {
 	_, err = c.API.DeleteProject(context.Background(), &generated.DeleteProjectRequestOptions{
 		PathParams: &generated.DeleteProjectPath{ProjectID: uint32(id)},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("delete project %d out-of-band: %v", id, err)
 	}
 }

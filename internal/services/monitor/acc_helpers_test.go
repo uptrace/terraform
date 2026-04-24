@@ -41,7 +41,7 @@ func testAccCheckMonitorDestroy(t *testing.T, resourceType string) resource.Test
 			if err == nil {
 				return fmt.Errorf("monitor %s still exists after destroy", rs.Primary.ID)
 			}
-			if !client.IsNotFound(err) && !client.IsForbidden(err) {
+			if !client.IsNotFound(err) {
 				return fmt.Errorf("checking monitor %s after destroy: %w", rs.Primary.ID, err)
 			}
 		}
@@ -70,7 +70,7 @@ func deleteMonitorOutOfBand(t *testing.T, projectIDStr, monitorIDStr string) {
 			MonitorID: monitorID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("delete monitor %d out-of-band: %v", monitorID, err)
 	}
 }

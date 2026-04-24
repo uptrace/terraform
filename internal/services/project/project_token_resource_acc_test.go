@@ -73,7 +73,7 @@ func testAccCheckProjectTokenDestroy(t *testing.T) resource.TestCheckFunc {
 			if err == nil {
 				return fmt.Errorf("project token %s still exists after destroy", rs.Primary.ID)
 			}
-			if !client.IsNotFound(err) && !client.IsForbidden(err) {
+			if !client.IsNotFound(err) {
 				return fmt.Errorf("checking project token %s after destroy: %w", rs.Primary.ID, err)
 			}
 		}
@@ -205,7 +205,7 @@ func deleteProjectTokenOutOfBand(t *testing.T, projectIDStr, tokenIDStr string) 
 			TokenID:   tokenID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("delete project token %d out-of-band: %v", tokenID, err)
 	}
 }
