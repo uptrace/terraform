@@ -62,7 +62,7 @@ func testAccCheckTeamDestroy(t *testing.T) resource.TestCheckFunc {
 			if err == nil {
 				return fmt.Errorf("team %d still exists after destroy", teamID)
 			}
-			if !client.IsNotFound(err) && !client.IsForbidden(err) {
+			if !client.IsNotFound(err) {
 				return fmt.Errorf("checking team %d after destroy: %w", teamID, err)
 			}
 		}
@@ -182,7 +182,7 @@ func deleteTeamOutOfBand(t *testing.T, orgIDStr, teamIDStr string) {
 	_, err = c.API.DeleteTeam(context.Background(), &generated.DeleteTeamRequestOptions{
 		PathParams: &generated.DeleteTeamPath{OrgID: orgID, TeamID: teamID},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("delete team %d out-of-band: %v", teamID, err)
 	}
 }

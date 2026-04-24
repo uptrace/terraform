@@ -136,7 +136,7 @@ func (r *TeamProjectResource) Read(ctx context.Context, req resource.ReadRequest
 	})
 	if err != nil {
 		// Parent team (or org) is gone — the membership is implicitly gone too.
-		if tfutil.IsDeleteGone(err) {
+		if client.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -191,7 +191,7 @@ func (r *TeamProjectResource) Delete(ctx context.Context, req resource.DeleteReq
 			ProjectID: projectID,
 		},
 	})
-	if err != nil && !tfutil.IsDeleteGone(err) {
+	if err != nil && !client.IsNotFound(err) {
 		tfutil.AddAPIError(&resp.Diagnostics, "remove team project failed", err)
 	}
 }

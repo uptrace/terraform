@@ -150,7 +150,7 @@ func (r *TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		PathParams: &generated.GetTeamPath{OrgID: orgID, TeamID: teamID},
 	})
 	if err != nil {
-		if tfutil.IsDeleteGone(err) {
+		if client.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -225,7 +225,7 @@ func (r *TeamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err = r.client.API.DeleteTeam(ctx, &generated.DeleteTeamRequestOptions{
 		PathParams: &generated.DeleteTeamPath{OrgID: orgID, TeamID: teamID},
 	})
-	if err != nil && !tfutil.IsDeleteGone(err) {
+	if err != nil && !client.IsNotFound(err) {
 		tfutil.AddAPIError(&resp.Diagnostics, "delete team failed", err)
 	}
 }

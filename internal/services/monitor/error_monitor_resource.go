@@ -125,7 +125,7 @@ func (r *ErrorMonitorResource) Read(ctx context.Context, req resource.ReadReques
 		},
 	})
 	if err != nil {
-		if tfutil.IsDeleteGone(err) {
+		if client.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -213,7 +213,7 @@ func (r *ErrorMonitorResource) Delete(ctx context.Context, req resource.DeleteRe
 			MonitorID: monitorID,
 		},
 	})
-	if err != nil && !tfutil.IsDeleteGone(err) {
+	if err != nil && !client.IsNotFound(err) {
 		tfutil.AddAPIError(&resp.Diagnostics, "delete monitor failed", err)
 	}
 }

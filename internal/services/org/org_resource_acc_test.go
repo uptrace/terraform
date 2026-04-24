@@ -48,7 +48,7 @@ func testAccCheckOrgDestroy(t *testing.T) resource.TestCheckFunc {
 			if err == nil {
 				return fmt.Errorf("org %s still exists after destroy", rs.Primary.ID)
 			}
-			if !client.IsNotFound(err) && !client.IsForbidden(err) {
+			if !client.IsNotFound(err) {
 				return fmt.Errorf("checking org %s after destroy: %w", rs.Primary.ID, err)
 			}
 		}
@@ -144,7 +144,7 @@ func deleteOrgOutOfBand(t *testing.T, orgID string) {
 	_, err = c.API.DeleteOrg(context.Background(), &generated.DeleteOrgRequestOptions{
 		PathParams: &generated.DeleteOrgPath{OrgID: id},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
+	if err != nil && !client.IsNotFound(err) {
 		t.Fatalf("delete org %d out-of-band: %v", id, err)
 	}
 }
