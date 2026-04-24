@@ -99,7 +99,7 @@ func (r *OrgResource) Create(ctx context.Context, req resource.CreateRequest, re
 		Body: createReq,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("create org failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "create org failed", err)
 		return
 	}
 
@@ -124,17 +124,11 @@ func (r *OrgResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		PathParams: &generated.GetOrgPath{OrgID: orgID},
 	})
 	if err != nil {
-		if client.IsNotFound(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		// CE returns 403 for orgs that have been deleted; treat as gone.
-		if client.IsForbidden(err) {
-			tflog.Warn(ctx, "org returned 403, treating as deleted", map[string]any{"id": state.ID.ValueString()})
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		resp.Diagnostics.AddError("read org failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "read org failed", err)
 		return
 	}
 
@@ -165,7 +159,7 @@ func (r *OrgResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		},
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("update org failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "update org failed", err)
 		return
 	}
 	org := out.Org
@@ -178,7 +172,7 @@ func (r *OrgResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			},
 		})
 		if err != nil {
-			resp.Diagnostics.AddError("update org budget failed", err.Error())
+			tfutil.AddAPIError(&resp.Diagnostics, "update org budget failed", err)
 			return
 		}
 		org = budgetOut.Org
@@ -206,8 +200,8 @@ func (r *OrgResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	_, err = r.client.API.DeleteOrg(ctx, &generated.DeleteOrgRequestOptions{
 		PathParams: &generated.DeleteOrgPath{OrgID: orgID},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("delete org failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&resp.Diagnostics, "delete org failed", err)
 	}
 }
 

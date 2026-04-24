@@ -10,6 +10,7 @@ import (
 
 	"github.com/uptrace/terraform/internal/client"
 	"github.com/uptrace/terraform/internal/generated"
+	"github.com/uptrace/terraform/internal/tfutil"
 )
 
 // channelCRUD bundles the per-type hooks that vary across channel resources.
@@ -50,7 +51,7 @@ func channelCreate[M any](ctx context.Context, c *client.Client, plan *M, h chan
 		Body:       body,
 	})
 	if err != nil {
-		diags.AddError("create "+h.TypeName+" failed", err.Error())
+		tfutil.AddAPIError(&diags, "create "+h.TypeName+" failed", err)
 		return diags
 	}
 
@@ -77,10 +78,10 @@ func channelRead[M any](ctx context.Context, c *client.Client, state *M, h chann
 		PathParams: &generated.GetNotificationChannelPath{ProjectID: projectID, ChannelID: channelID},
 	})
 	if err != nil {
-		if client.IsNotFound(err) || client.IsForbidden(err) {
+		if tfutil.IsDeleteGone(err) {
 			return true, diags
 		}
-		diags.AddError("read "+h.TypeName+" failed", err.Error())
+		tfutil.AddAPIError(&diags, "read "+h.TypeName+" failed", err)
 		return false, diags
 	}
 
@@ -116,7 +117,7 @@ func channelUpdate[M any](ctx context.Context, c *client.Client, plan *M, h chan
 		Body:       body,
 	})
 	if err != nil {
-		diags.AddError("update "+h.TypeName+" failed", err.Error())
+		tfutil.AddAPIError(&diags, "update "+h.TypeName+" failed", err)
 		return diags
 	}
 
@@ -144,8 +145,8 @@ func channelDelete[M any](ctx context.Context, c *client.Client, state *M, h cha
 	_, err = c.API.DeleteNotificationChannel(ctx, &generated.DeleteNotificationChannelRequestOptions{
 		PathParams: &generated.DeleteNotificationChannelPath{ProjectID: projectID, ChannelID: channelID},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		diags.AddError("delete "+h.TypeName+" failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&diags, "delete "+h.TypeName+" failed", err)
 	}
 	return diags
 }

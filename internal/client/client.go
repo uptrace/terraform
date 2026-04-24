@@ -61,6 +61,30 @@ func IsForbidden(err error) bool {
 	return hasStatusCode(err, http.StatusForbidden)
 }
 
+// APIErrorMessage returns the server-side message from an API error, or
+// err.Error() otherwise. Needed because the generated Error.Error() is a
+// stub that returns "unmapped client error" for every API response.
+func APIErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	if apiErr, ok := apiError(err); ok && apiErr.ErrorData.Message != "" {
+		return apiErr.ErrorData.Message
+	}
+	return err.Error()
+}
+
+// apiError unwraps the ClientAPIError envelope to the decoded generated.Error
+// value. The runtime wraps the decoded error as a value (not pointer), so we
+// match on the value type.
+func apiError(err error) (generated.Error, bool) {
+	clientErr, ok := errors.AsType[*runtime.ClientAPIError](err)
+	if !ok {
+		return generated.Error{}, false
+	}
+	return errors.AsType[generated.Error](clientErr.Unwrap())
+}
+
 func hasStatusCode(err error, code int) bool {
 	clientErr, ok := errors.AsType[*runtime.ClientAPIError](err)
 	if !ok {

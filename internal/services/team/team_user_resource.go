@@ -108,7 +108,7 @@ func (r *TeamUserResource) Create(ctx context.Context, req resource.CreateReques
 		},
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("add team user failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "add team user failed", err)
 		return
 	}
 
@@ -133,11 +133,11 @@ func (r *TeamUserResource) Read(ctx context.Context, req resource.ReadRequest, r
 		PathParams: &generated.ListTeamUsersPath{OrgID: orgID, TeamID: teamID},
 	})
 	if err != nil {
-		if client.IsNotFound(err) || client.IsForbidden(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("list team users failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "list team users failed", err)
 		return
 	}
 
@@ -186,8 +186,8 @@ func (r *TeamUserResource) Delete(ctx context.Context, req resource.DeleteReques
 			OrgUserID: orgUserID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("remove team user failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&resp.Diagnostics, "remove team user failed", err)
 	}
 }
 

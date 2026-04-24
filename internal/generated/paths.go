@@ -24,6 +24,8 @@ type TeamID = uint64
 
 type OrgUserID = uint64
 
+type InviteID = string
+
 type GridItemID = int64
 
 type SectionID = int64
@@ -553,6 +555,96 @@ func (c CreateProjectPath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(c))
 }
 
+type ListOrgUsersPath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+}
+
+func (l ListOrgUsersPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(l))
+}
+
+type GetOrgUserPath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+
+	// OrgUserID Organization user ID.
+	OrgUserID OrgUserID `json:"org_user_id" jsonschema:"Organization user ID." validate:"required"`
+}
+
+func (g GetOrgUserPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(g))
+}
+
+type UpdateOrgUserRolePath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+
+	// OrgUserID Organization user ID.
+	OrgUserID OrgUserID `json:"org_user_id" jsonschema:"Organization user ID." validate:"required"`
+}
+
+func (u UpdateOrgUserRolePath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(u))
+}
+
+type RemoveOrgUserPath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+
+	// OrgUserID Organization user ID.
+	OrgUserID OrgUserID `json:"org_user_id" jsonschema:"Organization user ID." validate:"required"`
+}
+
+func (r RemoveOrgUserPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(r))
+}
+
+type UpdateOrgUserProjectPermPath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+
+	// OrgUserID Organization user ID.
+	OrgUserID OrgUserID `json:"org_user_id" jsonschema:"Organization user ID." validate:"required"`
+
+	// ProjectID Uptrace project ID.
+	ProjectID ProjectID `json:"project_id" jsonschema:"Uptrace project ID." validate:"required"`
+}
+
+func (u UpdateOrgUserProjectPermPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(u))
+}
+
+type ListOrgInvitesPath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+}
+
+func (l ListOrgInvitesPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(l))
+}
+
+type CreateOrgInvitePath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+}
+
+func (c CreateOrgInvitePath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(c))
+}
+
+type CancelOrgInvitePath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+
+	// InviteID Invitation ID (32-character hex string).
+	InviteID InviteID `json:"invite_id" jsonschema:"Invitation ID (32-character hex string)." validate:"required"`
+}
+
+func (c CancelOrgInvitePath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(c))
+}
+
 type ListTeamsPath struct {
 	// OrgID Organization ID.
 	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
@@ -689,6 +781,15 @@ type RemoveTeamUserPath struct {
 
 func (r RemoveTeamUserPath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(r))
+}
+
+type JoinOrgPath struct {
+	// InviteID Invitation ID (32-character hex string).
+	InviteID InviteID `json:"invite_id" jsonschema:"Invitation ID (32-character hex string)." validate:"required"`
+}
+
+func (j JoinOrgPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(j))
 }
 
 type GetProjectPath struct {

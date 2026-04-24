@@ -566,3 +566,8 @@ func (l ListAlertsQuery) Validate() error {
 	}
 	return errors
 }
+
+type ListOrgUsersQuery struct {
+	// Email Case-insensitive substring match against user email.
+	Email *string `json:"email,omitempty" jsonschema:"Case-insensitive substring match against user email."`
+}

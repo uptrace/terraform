@@ -166,7 +166,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		Body:       body,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("create project failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "create project failed", err)
 		return
 	}
 
@@ -194,17 +194,11 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		PathParams: &generated.GetProjectPath{ProjectID: projectID},
 	})
 	if err != nil {
-		if client.IsNotFound(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		// CE returns 403 for projects that have been deleted; treat as gone.
-		if client.IsForbidden(err) {
-			tflog.Warn(ctx, "project returned 403, treating as deleted", map[string]any{"id": state.ID.ValueString()})
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		resp.Diagnostics.AddError("read project failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "read project failed", err)
 		return
 	}
 
@@ -242,7 +236,7 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 		Body:       body,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("update project failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "update project failed", err)
 		return
 	}
 
@@ -273,8 +267,8 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	_, err = r.client.API.DeleteProject(ctx, &generated.DeleteProjectRequestOptions{
 		PathParams: &generated.DeleteProjectPath{ProjectID: projectID},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("delete project failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&resp.Diagnostics, "delete project failed", err)
 	}
 }
 

@@ -306,7 +306,20 @@ Evaluates an MQL query on a schedule with a manual threshold or automatic trend-
 
 Not yet exposed on either resource: `repeat_interval` (shared oneOf of `default` / `fixed` / `linear` / `exponential`). Follow-up work.
 
+## Data sources
 
+### uptrace_org_user
+
+Resolves an existing organization user to their `OrgUser` ID, so you can reference them from membership resources like `uptrace_team_user`. Membership is managed outside Terraform — the user must already be a member of the organization at plan time. Errors if no match is found.
+
+| Field   | Type   | Required | Note                                                                    |
+|---------|--------|----------|-------------------------------------------------------------------------|
+| org_id  | string | yes      | Organization to search within.                                          |
+| email   | string | yes      | Matched case-insensitively against the server value.                    |
+| id      | string | computed | OrgUser ID. Use where another resource wants an `org_user_id`.          |
+| user_id | string | computed | Underlying User ID (distinct from `id`).                                |
+| role    | string | computed | `owner`, `admin`, `member`, `viewer`, `billing_manager`, `collaborator`.|
+| name    | string | computed | Display name from the user's profile.                                   |
 
 ## Files not in git
 

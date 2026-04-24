@@ -980,13 +980,45 @@ func (m MetricAttributeValue) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(m))
 }
 
+// ErrorDetail Machine-readable error code and human-readable message.
+type ErrorDetail struct {
+	// Code Short error code such as forbidden or not_found, or a field name for validation errors.
+	Code string `json:"code" jsonschema:"Short error code such as forbidden or not_found, or a field name for validation errors." validate:"required"`
+
+	// Message Human-readable explanation of what went wrong.
+	Message string `json:"message" jsonschema:"Human-readable explanation of what went wrong." validate:"required"`
+}
+
+func (e ErrorDetail) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(e))
+}
+
+// Error Uniform error envelope returned for every non-2xx response.
 type Error struct {
-	Code    string `json:"code" validate:"required"`
-	Message string `json:"message" validate:"required"`
+	// ErrorData Machine-readable error code and human-readable message.
+	ErrorData ErrorDetail `json:"error" jsonschema:"Machine-readable error code and human-readable message."`
+
+	// StatusCode HTTP status code; mirrors the response status line.
+	StatusCode int `json:"statusCode" jsonschema:"HTTP status code; mirrors the response status line." validate:"required"`
+
+	// TraceID Server-assigned trace ID useful for correlating logs.
+	TraceID *string `json:"traceId,omitempty" jsonschema:"Server-assigned trace ID useful for correlating logs."`
 }
 
 func (e Error) Validate() error {
-	return runtime.ConvertValidatorError(typesValidator.Struct(e))
+	var errors runtime.ValidationErrors
+	if v, ok := any(e.ErrorData).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("ErrorData", err)
+		}
+	}
+	if err := typesValidator.Var(e.StatusCode, "required"); err != nil {
+		errors = errors.Append("StatusCode", err)
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
 }
 
 func (s Error) Error() string {
@@ -2908,6 +2940,399 @@ func (t TeamProjectAddRequest) Validate() error {
 		return nil
 	}
 	return errors
+}
+
+// OrgUser An organization membership row. Links a user to an organization with a role.
+type OrgUser struct {
+	ID     uint64 `json:"id" validate:"required"`
+	OrgID  uint64 `json:"orgId" validate:"required"`
+	UserID uint64 `json:"userId" validate:"required"`
+
+	// ProviderID SSO provider ID if the membership was auto-provisioned via OIDC/SAML. Zero for memberships created directly or via invitation acceptance.
+	ProviderID *uint64 `json:"providerId,omitempty" jsonschema:"SSO provider ID if the membership was auto-provisioned via OIDC/SAML. Zero for memberships created directly or via invitation acceptance."`
+
+	// Role A user's role within an organization.
+	Role UserRole `json:"role" jsonschema:"A user's role within an organization." validate:"required"`
+
+	// UpdatedAt Unix timestamp in nanoseconds.
+	UpdatedAt *float32 `json:"updatedAt,omitempty" jsonschema:"Unix timestamp in nanoseconds."`
+}
+
+func (o OrgUser) Validate() error {
+	var errors runtime.ValidationErrors
+	if err := typesValidator.Var(o.ID, "required"); err != nil {
+		errors = errors.Append("ID", err)
+	}
+	if err := typesValidator.Var(o.OrgID, "required"); err != nil {
+		errors = errors.Append("OrgID", err)
+	}
+	if err := typesValidator.Var(o.UserID, "required"); err != nil {
+		errors = errors.Append("UserID", err)
+	}
+	if v, ok := any(o.Role).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Role", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// OrgUserDetail An OrgUser enriched with user profile and membership counts. Returned by list endpoints.
+type OrgUserDetail struct {
+	ID     uint64 `json:"id" validate:"required"`
+	OrgID  uint64 `json:"orgId" validate:"required"`
+	UserID uint64 `json:"userId" validate:"required"`
+
+	// ProviderID SSO provider ID if the membership was auto-provisioned via OIDC/SAML. Zero for memberships created directly or via invitation acceptance.
+	ProviderID *uint64 `json:"providerId,omitempty" jsonschema:"SSO provider ID if the membership was auto-provisioned via OIDC/SAML. Zero for memberships created directly or via invitation acceptance."`
+
+	// Role A user's role within an organization.
+	Role UserRole `json:"role" jsonschema:"A user's role within an organization." validate:"required"`
+
+	// UpdatedAt Unix timestamp in nanoseconds.
+	UpdatedAt *float32 `json:"updatedAt,omitempty" jsonschema:"Unix timestamp in nanoseconds."`
+	Name      string   `json:"name" validate:"required"`
+	Email     string   `json:"email" validate:"required"`
+
+	// Avatar URL to the user's avatar image.
+	Avatar *string `json:"avatar,omitempty" jsonschema:"URL to the user's avatar image."`
+
+	// MfaEnabled Whether the user has two-factor authentication enabled.
+	MfaEnabled *bool `json:"mfaEnabled,omitempty" jsonschema:"Whether the user has two-factor authentication enabled."`
+
+	// ProviderDomain SSO provider domain if the membership was auto-provisioned. Empty otherwise.
+	ProviderDomain *string `json:"providerDomain,omitempty" jsonschema:"SSO provider domain if the membership was auto-provisioned. Empty otherwise."`
+
+	// NumProject Number of projects the user has access to within this organization.
+	NumProject *int64 `json:"numProject,omitempty" jsonschema:"Number of projects the user has access to within this organization."`
+
+	// NumTeam Number of teams the user belongs to within this organization.
+	NumTeam *int64 `json:"numTeam,omitempty" jsonschema:"Number of teams the user belongs to within this organization."`
+}
+
+func (o OrgUserDetail) Validate() error {
+	var errors runtime.ValidationErrors
+	if err := typesValidator.Var(o.ID, "required"); err != nil {
+		errors = errors.Append("ID", err)
+	}
+	if err := typesValidator.Var(o.OrgID, "required"); err != nil {
+		errors = errors.Append("OrgID", err)
+	}
+	if err := typesValidator.Var(o.UserID, "required"); err != nil {
+		errors = errors.Append("UserID", err)
+	}
+	if v, ok := any(o.Role).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Role", err)
+		}
+	}
+	if err := typesValidator.Var(o.Name, "required"); err != nil {
+		errors = errors.Append("Name", err)
+	}
+	if err := typesValidator.Var(o.Email, "required"); err != nil {
+		errors = errors.Append("Email", err)
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+type OrgUserListResponse struct {
+	Users []OrgUserDetail `json:"users" validate:"required"`
+}
+
+func (o OrgUserListResponse) Validate() error {
+	var errors runtime.ValidationErrors
+	for i, item := range o.Users {
+		if v, ok := any(item).(runtime.Validator); ok {
+			if err := v.Validate(); err != nil {
+				errors = errors.Append(fmt.Sprintf("Users[%d]", i), err)
+			}
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// OrgUserResponse Response wrapping a single OrgUser under the `user` key.
+type OrgUserResponse struct {
+	// User An organization membership row. Links a user to an organization with a role.
+	User OrgUser `json:"user" jsonschema:"An organization membership row. Links a user to an organization with a role."`
+}
+
+func (o OrgUserResponse) Validate() error {
+	var errors runtime.ValidationErrors
+	if v, ok := any(o.User).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("User", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// OrgUserShowResponse Detailed org user view returned by `GET /orgs/{org_id}/users/{org_user_id}`.
+type OrgUserShowResponse struct {
+	// User A registered user account.
+	User User `json:"user" jsonschema:"A registered user account."`
+
+	// OrgUser An organization membership row. Links a user to an organization with a role.
+	OrgUser OrgUser `json:"orgUser" jsonschema:"An organization membership row. Links a user to an organization with a role."`
+
+	// Projects Projects the user has access to in this organization.
+	Projects []Project `json:"projects" jsonschema:"Projects the user has access to in this organization." validate:"required"`
+
+	// Teams Teams the user belongs to in this organization.
+	Teams []Team `json:"teams" jsonschema:"Teams the user belongs to in this organization." validate:"required"`
+}
+
+func (o OrgUserShowResponse) Validate() error {
+	var errors runtime.ValidationErrors
+	if v, ok := any(o.User).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("User", err)
+		}
+	}
+	if v, ok := any(o.OrgUser).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("OrgUser", err)
+		}
+	}
+	for i, item := range o.Projects {
+		if v, ok := any(item).(runtime.Validator); ok {
+			if err := v.Validate(); err != nil {
+				errors = errors.Append(fmt.Sprintf("Projects[%d]", i), err)
+			}
+		}
+	}
+	for i, item := range o.Teams {
+		if v, ok := any(item).(runtime.Validator); ok {
+			if err := v.Validate(); err != nil {
+				errors = errors.Append(fmt.Sprintf("Teams[%d]", i), err)
+			}
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+type OrgUserRoleUpdateRequest struct {
+	// Role A user's role within an organization.
+	Role UserRole `json:"role" jsonschema:"A user's role within an organization." validate:"required"`
+}
+
+func (o OrgUserRoleUpdateRequest) Validate() error {
+	var errors runtime.ValidationErrors
+	if v, ok := any(o.Role).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Role", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// OrgUserProject A user's project-level permission override.
+type OrgUserProject struct {
+	OrgID     uint64 `json:"orgId" validate:"required"`
+	OrgUserID uint64 `json:"orgUserId" validate:"required"`
+	ProjectID uint32 `json:"projectId" validate:"required"`
+
+	// PermLevel Project-level permission override (empty when unset).
+	PermLevel PermLevel `json:"permLevel" jsonschema:"Project-level permission override (empty when unset)." validate:"required"`
+}
+
+func (o OrgUserProject) Validate() error {
+	var errors runtime.ValidationErrors
+	if err := typesValidator.Var(o.OrgID, "required"); err != nil {
+		errors = errors.Append("OrgID", err)
+	}
+	if err := typesValidator.Var(o.OrgUserID, "required"); err != nil {
+		errors = errors.Append("OrgUserID", err)
+	}
+	if err := typesValidator.Var(o.ProjectID, "required"); err != nil {
+		errors = errors.Append("ProjectID", err)
+	}
+	if v, ok := any(o.PermLevel).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("PermLevel", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// OrgUserProjectResponse Response wrapping an OrgUserProject under the `user` key.
+type OrgUserProjectResponse struct {
+	// User A user's project-level permission override.
+	User OrgUserProject `json:"user" jsonschema:"A user's project-level permission override."`
+}
+
+func (o OrgUserProjectResponse) Validate() error {
+	var errors runtime.ValidationErrors
+	if v, ok := any(o.User).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("User", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+type OrgUserProjectUpdateRequest struct {
+	// PermLevel Project-level permission override (empty when unset).
+	PermLevel PermLevel `json:"permLevel" jsonschema:"Project-level permission override (empty when unset)." validate:"required"`
+}
+
+func (o OrgUserProjectUpdateRequest) Validate() error {
+	var errors runtime.ValidationErrors
+	if v, ok := any(o.PermLevel).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("PermLevel", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// UserInvite A pending or resolved organization invitation.
+type UserInvite struct {
+	// ID 32-character hex trace ID used as the invitation token in the /join URL.
+	ID string `json:"id" jsonschema:"32-character hex trace ID used as the invitation token in the /join URL." validate:"required"`
+
+	// Email Invitee email (lowercased, trimmed).
+	Email string `json:"email" jsonschema:"Invitee email (lowercased, trimmed)." validate:"required"`
+	OrgID uint64 `json:"orgId" validate:"required"`
+
+	// Role A user's role within an organization.
+	Role UserRole `json:"role" jsonschema:"A user's role within an organization." validate:"required"`
+
+	// TeamID If set, the invitee is added to this team on acceptance.
+	TeamID *uint64 `json:"teamId,omitempty" jsonschema:"If set, the invitee is added to this team on acceptance."`
+
+	// State Lifecycle state of an organization invitation.
+	State InviteState `json:"state" jsonschema:"Lifecycle state of an organization invitation." validate:"required"`
+
+	// CreatedAt Unix timestamp in nanoseconds.
+	CreatedAt *float32 `json:"createdAt,omitempty" jsonschema:"Unix timestamp in nanoseconds."`
+
+	// Team Team name populated on list responses. Empty if teamId is unset.
+	Team *string `json:"team,omitempty" jsonschema:"Team name populated on list responses. Empty if teamId is unset."`
+}
+
+func (u UserInvite) Validate() error {
+	var errors runtime.ValidationErrors
+	if err := typesValidator.Var(u.ID, "required"); err != nil {
+		errors = errors.Append("ID", err)
+	}
+	if err := typesValidator.Var(u.Email, "required"); err != nil {
+		errors = errors.Append("Email", err)
+	}
+	if err := typesValidator.Var(u.OrgID, "required"); err != nil {
+		errors = errors.Append("OrgID", err)
+	}
+	if v, ok := any(u.Role).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Role", err)
+		}
+	}
+	if v, ok := any(u.State).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("State", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+type UserInviteResponse struct {
+	// Invite A pending or resolved organization invitation.
+	Invite UserInvite `json:"invite" jsonschema:"A pending or resolved organization invitation."`
+}
+
+func (u UserInviteResponse) Validate() error {
+	var errors runtime.ValidationErrors
+	if v, ok := any(u.Invite).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Invite", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+type UserInviteListResponse struct {
+	Invites []UserInvite `json:"invites" validate:"required"`
+}
+
+func (u UserInviteListResponse) Validate() error {
+	var errors runtime.ValidationErrors
+	for i, item := range u.Invites {
+		if v, ok := any(item).(runtime.Validator); ok {
+			if err := v.Validate(); err != nil {
+				errors = errors.Append(fmt.Sprintf("Invites[%d]", i), err)
+			}
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+type UserInviteCreateRequest struct {
+	// Email Email address of the invitee. Required; trimmed and lowercased server-side.
+	Email string `json:"email" jsonschema:"Email address of the invitee. Required; trimmed and lowercased server-side." validate:"required"`
+
+	// Role A user's role within an organization.
+	Role UserRole `json:"role" jsonschema:"A user's role within an organization." validate:"required"`
+
+	// TeamID Optional team to add the invitee to on acceptance. Must belong to the same org.
+	TeamID *uint64 `json:"teamId,omitempty" jsonschema:"Optional team to add the invitee to on acceptance. Must belong to the same org."`
+}
+
+func (u UserInviteCreateRequest) Validate() error {
+	var errors runtime.ValidationErrors
+	if err := typesValidator.Var(u.Email, "required"); err != nil {
+		errors = errors.Append("Email", err)
+	}
+	if v, ok := any(u.Role).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Role", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// JoinResponse Response from accepting an invitation. Contains `resetPasswordToken` only when the user had no password set prior to acceptance; otherwise the server returns an empty body (decode as an empty object).
+type JoinResponse struct {
+	// ResetPasswordToken 32-character hex nonce. Use to set the user's initial password.
+	ResetPasswordToken *string `json:"resetPasswordToken,omitempty" jsonschema:"32-character hex nonce. Use to set the user's initial password."`
 }
 
 // EmptyResponse Empty JSON object `{}`. Returned by operations that have no resource to return on success.

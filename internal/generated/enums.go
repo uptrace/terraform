@@ -988,3 +988,45 @@ func (p PermLevel) Validate() error {
 		return runtime.NewValidationErrorsFromString("Enum", fmt.Sprintf("must be a valid PermLevel value, got: %v", p))
 	}
 }
+
+// UserRole A user's role within an organization.
+type UserRole string
+
+const (
+	UserRoleAdmin          UserRole = "admin"
+	UserRoleBillingManager UserRole = "billing_manager"
+	UserRoleCollaborator   UserRole = "collaborator"
+	UserRoleMember         UserRole = "member"
+	UserRoleOwner          UserRole = "owner"
+	UserRoleViewer         UserRole = "viewer"
+)
+
+// Validate checks if the UserRole value is valid
+func (u UserRole) Validate() error {
+	switch u {
+	case UserRoleAdmin, UserRoleBillingManager, UserRoleCollaborator, UserRoleMember, UserRoleOwner, UserRoleViewer:
+		return nil
+	default:
+		return runtime.NewValidationErrorsFromString("Enum", fmt.Sprintf("must be a valid UserRole value, got: %v", u))
+	}
+}
+
+// InviteState Lifecycle state of an organization invitation.
+type InviteState string
+
+const (
+	Accepted InviteState = "accepted"
+	Canceled InviteState = "canceled"
+	Expired  InviteState = "expired"
+	Sent     InviteState = "sent"
+)
+
+// Validate checks if the InviteState value is valid
+func (i InviteState) Validate() error {
+	switch i {
+	case Accepted, Canceled, Expired, Sent:
+		return nil
+	default:
+		return runtime.NewValidationErrorsFromString("Enum", fmt.Sprintf("must be a valid InviteState value, got: %v", i))
+	}
+}

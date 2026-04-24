@@ -193,6 +193,30 @@ type ClientInterface interface {
 	// CreateProject Create project
 	CreateProject(ctx context.Context, options *CreateProjectRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CreateProjectResponse, error)
 
+	// ListOrgUsers List organization users
+	ListOrgUsers(ctx context.Context, options *ListOrgUsersRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListOrgUsersResponse, error)
+
+	// GetOrgUser Get organization user
+	GetOrgUser(ctx context.Context, options *GetOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*GetOrgUserResponse, error)
+
+	// UpdateOrgUserRole Update organization user role
+	UpdateOrgUserRole(ctx context.Context, options *UpdateOrgUserRoleRequestOptions, reqEditors ...runtime.RequestEditorFn) (*UpdateOrgUserRoleResponse, error)
+
+	// RemoveOrgUser Remove organization user
+	RemoveOrgUser(ctx context.Context, options *RemoveOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*RemoveOrgUserResponse, error)
+
+	// UpdateOrgUserProjectPerm Update organization user project permission
+	UpdateOrgUserProjectPerm(ctx context.Context, options *UpdateOrgUserProjectPermRequestOptions, reqEditors ...runtime.RequestEditorFn) (*UpdateOrgUserProjectPermResponse, error)
+
+	// ListOrgInvites List organization invitations
+	ListOrgInvites(ctx context.Context, options *ListOrgInvitesRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListOrgInvitesResponse, error)
+
+	// CreateOrgInvite Create organization invitation
+	CreateOrgInvite(ctx context.Context, options *CreateOrgInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CreateOrgInviteResponse, error)
+
+	// CancelOrgInvite Cancel organization invitation
+	CancelOrgInvite(ctx context.Context, options *CancelOrgInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CancelOrgInviteResponse, error)
+
 	// ListTeams List organization teams
 	ListTeams(ctx context.Context, options *ListTeamsRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListTeamsResponse, error)
 
@@ -225,6 +249,9 @@ type ClientInterface interface {
 
 	// RemoveTeamUser Remove user from team
 	RemoveTeamUser(ctx context.Context, options *RemoveTeamUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*RemoveTeamUserResponse, error)
+
+	// JoinOrg Accept organization invitation
+	JoinOrg(ctx context.Context, options *JoinOrgRequestOptions, reqEditors ...runtime.RequestEditorFn) (*JoinOrgResponse, error)
 
 	// GetProject Get project
 	GetProject(ctx context.Context, options *GetProjectRequestOptions, reqEditors ...runtime.RequestEditorFn) (*GetProjectResponse, error)
@@ -2648,6 +2675,361 @@ func (c *Client) CreateProject(ctx context.Context, options *CreateProjectReques
 	return responseParser(ctx, resp)
 }
 
+// ListOrgUsers List organization users
+func (c *Client) ListOrgUsers(ctx context.Context, options *ListOrgUsersRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListOrgUsersResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/users",
+		Method:     "GET",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*ListOrgUsersResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(ListOrgUsersErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(ListOrgUsersResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/users")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// GetOrgUser Get organization user
+func (c *Client) GetOrgUser(ctx context.Context, options *GetOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*GetOrgUserResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/users/{org_user_id}",
+		Method:     "GET",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*GetOrgUserResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(GetOrgUserErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(GetOrgUserResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/users/{org_user_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// UpdateOrgUserRole Update organization user role
+func (c *Client) UpdateOrgUserRole(ctx context.Context, options *UpdateOrgUserRoleRequestOptions, reqEditors ...runtime.RequestEditorFn) (*UpdateOrgUserRoleResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL:  c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/users/{org_user_id}",
+		Method:      "PUT",
+		Options:     options,
+		ContentType: "application/json",
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*UpdateOrgUserRoleResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(UpdateOrgUserRoleErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(UpdateOrgUserRoleResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/users/{org_user_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// RemoveOrgUser Remove organization user
+func (c *Client) RemoveOrgUser(ctx context.Context, options *RemoveOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*RemoveOrgUserResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/users/{org_user_id}",
+		Method:     "DELETE",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*RemoveOrgUserResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(RemoveOrgUserErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(RemoveOrgUserResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/users/{org_user_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// UpdateOrgUserProjectPerm Update organization user project permission
+func (c *Client) UpdateOrgUserProjectPerm(ctx context.Context, options *UpdateOrgUserProjectPermRequestOptions, reqEditors ...runtime.RequestEditorFn) (*UpdateOrgUserProjectPermResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL:  c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/users/{org_user_id}/projects/{project_id}",
+		Method:      "PUT",
+		Options:     options,
+		ContentType: "application/json",
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*UpdateOrgUserProjectPermResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(UpdateOrgUserProjectPermErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(UpdateOrgUserProjectPermResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/users/{org_user_id}/projects/{project_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// ListOrgInvites List organization invitations
+func (c *Client) ListOrgInvites(ctx context.Context, options *ListOrgInvitesRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListOrgInvitesResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/invites",
+		Method:     "GET",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*ListOrgInvitesResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(ListOrgInvitesErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(ListOrgInvitesResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/invites")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// CreateOrgInvite Create organization invitation
+func (c *Client) CreateOrgInvite(ctx context.Context, options *CreateOrgInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CreateOrgInviteResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL:  c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/invites",
+		Method:      "POST",
+		Options:     options,
+		ContentType: "application/json",
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*CreateOrgInviteResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(CreateOrgInviteErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(CreateOrgInviteResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/invites")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// CancelOrgInvite Cancel organization invitation
+func (c *Client) CancelOrgInvite(ctx context.Context, options *CancelOrgInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CancelOrgInviteResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/invites/{invite_id}",
+		Method:     "DELETE",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*CancelOrgInviteResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(CancelOrgInviteErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(CancelOrgInviteResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/invites/{invite_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
 // ListTeams List organization teams
 func (c *Client) ListTeams(ctx context.Context, options *ListTeamsRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListTeamsResponse, error) {
 	var err error
@@ -3129,6 +3511,50 @@ func (c *Client) RemoveTeamUser(ctx context.Context, options *RemoveTeamUserRequ
 	}
 
 	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/teams/{team_id}/users/{org_user_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// JoinOrg Accept organization invitation
+func (c *Client) JoinOrg(ctx context.Context, options *JoinOrgRequestOptions, reqEditors ...runtime.RequestEditorFn) (*JoinOrgResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/join/{invite_id}",
+		Method:     "POST",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*JoinOrgResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(JoinOrgErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(JoinOrgResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/join/{invite_id}")
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}

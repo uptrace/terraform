@@ -174,6 +174,12 @@ type UpdateOrgBudgetBody = OrgUpdateBudgetRequest
 
 type CreateProjectBody = ProjectCreateRequest
 
+type UpdateOrgUserRoleBody = OrgUserRoleUpdateRequest
+
+type UpdateOrgUserProjectPermBody = OrgUserProjectUpdateRequest
+
+type CreateOrgInviteBody = UserInviteCreateRequest
+
 type CreateTeamBody = TeamCreateRequest
 
 // UpdateTeamBody Omitting or sending an empty `name` preserves the existing name. Omitting `permLevel` clears it to null.

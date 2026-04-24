@@ -116,7 +116,7 @@ func (r *ProjectTokenResource) Create(ctx context.Context, req resource.CreateRe
 		Body:       body,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("create project token failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "create project token failed", err)
 		return
 	}
 
@@ -151,11 +151,11 @@ func (r *ProjectTokenResource) Read(ctx context.Context, req resource.ReadReques
 		},
 	})
 	if err != nil {
-		if client.IsNotFound(err) || client.IsForbidden(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("read project token failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "read project token failed", err)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (r *ProjectTokenResource) Update(ctx context.Context, req resource.UpdateRe
 		},
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("update project token failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "update project token failed", err)
 		return
 	}
 
@@ -236,8 +236,8 @@ func (r *ProjectTokenResource) Delete(ctx context.Context, req resource.DeleteRe
 			TokenID:   tokenID,
 		},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("delete project token failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&resp.Diagnostics, "delete project token failed", err)
 	}
 }
 

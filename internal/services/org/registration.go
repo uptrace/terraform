@@ -19,5 +19,7 @@ func (Registration) Resources() []func() resource.Resource {
 }
 
 func (Registration) DataSources() []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		NewOrgUserDataSource,
+	}
 }

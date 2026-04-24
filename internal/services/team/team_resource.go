@@ -120,7 +120,7 @@ func (r *TeamResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Body:       body,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("create team failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "create team failed", err)
 		return
 	}
 
@@ -150,11 +150,11 @@ func (r *TeamResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		PathParams: &generated.GetTeamPath{OrgID: orgID, TeamID: teamID},
 	})
 	if err != nil {
-		if client.IsNotFound(err) || client.IsForbidden(err) {
+		if tfutil.IsDeleteGone(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("read team failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "read team failed", err)
 		return
 	}
 
@@ -194,7 +194,7 @@ func (r *TeamResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		Body:       body,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("update team failed", err.Error())
+		tfutil.AddAPIError(&resp.Diagnostics, "update team failed", err)
 		return
 	}
 
@@ -225,8 +225,8 @@ func (r *TeamResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err = r.client.API.DeleteTeam(ctx, &generated.DeleteTeamRequestOptions{
 		PathParams: &generated.DeleteTeamPath{OrgID: orgID, TeamID: teamID},
 	})
-	if err != nil && !client.IsNotFound(err) && !client.IsForbidden(err) {
-		resp.Diagnostics.AddError("delete team failed", err.Error())
+	if err != nil && !tfutil.IsDeleteGone(err) {
+		tfutil.AddAPIError(&resp.Diagnostics, "delete team failed", err)
 	}
 }
 
