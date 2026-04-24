@@ -194,7 +194,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		PathParams: &generated.GetProjectPath{ProjectID: projectID},
 	})
 	if err != nil {
-		if tfutil.IsDeleteGone(err) {
+		if client.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -267,7 +267,7 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	_, err = r.client.API.DeleteProject(ctx, &generated.DeleteProjectRequestOptions{
 		PathParams: &generated.DeleteProjectPath{ProjectID: projectID},
 	})
-	if err != nil && !tfutil.IsDeleteGone(err) {
+	if err != nil && !client.IsNotFound(err) {
 		tfutil.AddAPIError(&resp.Diagnostics, "delete project failed", err)
 	}
 }

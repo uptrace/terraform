@@ -124,7 +124,7 @@ func (r *OrgResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		PathParams: &generated.GetOrgPath{OrgID: orgID},
 	})
 	if err != nil {
-		if tfutil.IsDeleteGone(err) {
+		if client.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -200,7 +200,7 @@ func (r *OrgResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	_, err = r.client.API.DeleteOrg(ctx, &generated.DeleteOrgRequestOptions{
 		PathParams: &generated.DeleteOrgPath{OrgID: orgID},
 	})
-	if err != nil && !tfutil.IsDeleteGone(err) {
+	if err != nil && !client.IsNotFound(err) {
 		tfutil.AddAPIError(&resp.Diagnostics, "delete org failed", err)
 	}
 }

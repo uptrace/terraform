@@ -78,7 +78,7 @@ func channelRead[M any](ctx context.Context, c *client.Client, state *M, h chann
 		PathParams: &generated.GetNotificationChannelPath{ProjectID: projectID, ChannelID: channelID},
 	})
 	if err != nil {
-		if tfutil.IsDeleteGone(err) {
+		if client.IsNotFound(err) {
 			return true, diags
 		}
 		tfutil.AddAPIError(&diags, "read "+h.TypeName+" failed", err)
@@ -145,7 +145,7 @@ func channelDelete[M any](ctx context.Context, c *client.Client, state *M, h cha
 	_, err = c.API.DeleteNotificationChannel(ctx, &generated.DeleteNotificationChannelRequestOptions{
 		PathParams: &generated.DeleteNotificationChannelPath{ProjectID: projectID, ChannelID: channelID},
 	})
-	if err != nil && !tfutil.IsDeleteGone(err) {
+	if err != nil && !client.IsNotFound(err) {
 		tfutil.AddAPIError(&diags, "delete "+h.TypeName+" failed", err)
 	}
 	return diags

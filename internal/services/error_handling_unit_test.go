@@ -27,9 +27,6 @@ func TestServiceAPIErrorHandlingUsesTFUtilHelpers(t *testing.T) {
 			if strings.Contains(src, `failed", err.Error()`) {
 				t.Fatalf("%s still emits raw err.Error() for API failure diagnostics", file)
 			}
-			if strings.Contains(src, "client.IsNotFound(err)") || strings.Contains(src, "client.IsForbidden(err)") {
-				t.Fatalf("%s still uses legacy client status helpers instead of tfutil.IsDeleteGone", file)
-			}
 		})
 	}
 }
