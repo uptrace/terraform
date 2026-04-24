@@ -1,11 +1,11 @@
-# terraform-provider-uptrace-ce
+# terraform-provider-uptrace
 
 Minimal Terraform provider for managing Uptrace resources.
 
 ## Build
 
 ```bash
-go build -o terraform-provider-uptrace-ce .
+go build -o terraform-provider-uptrace .
 ```
 
 ## Setup
@@ -16,7 +16,7 @@ Create a dev override file so Terraform uses the local binary:
 cat > .terraformrc << 'EOF'
 provider_installation {
   dev_overrides {
-    "uptrace/uptrace-ce" = "/path/to/terraform-provider-uptrace-ce"
+    "uptrace/uptrace" = "/path/to/terraform-provider-uptrace"
   }
   direct {}
 }
@@ -26,7 +26,7 @@ EOF
 Export it:
 
 ```bash
-export TF_CLI_CONFIG_FILE=/path/to/terraform-provider-uptrace-ce/.terraformrc
+export TF_CLI_CONFIG_FILE=/path/to/terraform-provider-uptrace/.terraformrc
 ```
 
 ## Usage
@@ -35,7 +35,7 @@ export TF_CLI_CONFIG_FILE=/path/to/terraform-provider-uptrace-ce/.terraformrc
 terraform {
   required_providers {
     uptrace = {
-      source = "uptrace/uptrace-ce"
+      source = "uptrace/uptrace"
     }
   }
 }
@@ -327,7 +327,7 @@ The `.gitignore` excludes files generated locally:
 
 | File | What it is | How to get it |
 |------|-----------|---------------|
-| `terraform-provider-uptrace-ce` | Binary | `go build -o terraform-provider-uptrace-ce .` |
+| `terraform-provider-uptrace` | Binary | `go build -o terraform-provider-uptrace .` |
 | `.terraformrc` / `.tofurc` | Dev override config | Create manually (see Setup) |
 | `*.tfstate` | Terraform state | Created by `terraform apply` |
 | `.terraform/` | Provider cache | Created by `terraform init` |

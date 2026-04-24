@@ -1,6 +1,6 @@
 # Releasing
 
-This document describes how to publish a new version of the Terraform Uptrace CE
+This document describes how to publish a new version of the Terraform Uptrace
 provider to the Terraform Registry.
 
 ## One-time setup
@@ -68,7 +68,7 @@ add the following secrets:
 After the release is published, confirm the version appears on the registry:
 
 ```
-https://registry.terraform.io/providers/uptrace/uptrace-ce/latest
+https://registry.terraform.io/providers/uptrace/uptrace/latest
 ```
 
 You can also verify locally:

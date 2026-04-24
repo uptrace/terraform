@@ -17,7 +17,7 @@ func main() {
 	flag.Parse()
 
 	err := providerserver.Serve(context.Background(), provider.New(version.ProviderVersion), providerserver.ServeOpts{
-		Address: "registry.terraform.io/uptrace/uptrace-ce",
+		Address: "registry.terraform.io/uptrace/uptrace",
 		Debug:   debug,
 	})
 	if err != nil {
