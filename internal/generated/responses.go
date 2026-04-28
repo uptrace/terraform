@@ -332,6 +332,11 @@ type ListOrgUsersResponse = OrgUserListResponse
 
 type ListOrgUsersErrorResponse = Unauthorized
 
+// CreateOrgUserResponse Response from POST /orgs/{org_id}/users. Wraps the created or updated OrgUser under `orgUser`.
+type CreateOrgUserResponse = OrgUserCreateResponse
+
+type CreateOrgUserErrorResponse = BadRequest
+
 // GetOrgUserResponse Detailed org user view returned by `GET /orgs/{org_id}/users/{org_user_id}`.
 type GetOrgUserResponse = OrgUserShowResponse
 
@@ -342,8 +347,8 @@ type UpdateOrgUserRoleResponse = OrgUserResponse
 
 type UpdateOrgUserRoleErrorResponse = BadRequest
 
-// RemoveOrgUserResponse Empty JSON object `{}`. Returned by operations that have no resource to return on success.
-type RemoveOrgUserResponse = EmptyResponse
+// RemoveOrgUserResponse Response from DELETE /orgs/{org_id}/users/{org_user_id}.
+type RemoveOrgUserResponse = OrgUserDeleteResponse
 
 type RemoveOrgUserErrorResponse = Unauthorized
 
@@ -356,13 +361,20 @@ type ListOrgInvitesResponse = UserInviteListResponse
 
 type ListOrgInvitesErrorResponse = Unauthorized
 
+// CreateOrgInviteResponse Response from creating or processing an invitation. `userID` is always returned. `inviteID` is returned when an actual invite row was created; absent when the email already maps to a confirmed user. `addedToOrg: true` is returned only on the org-scoped path (POST /orgs/{org_id}/invites) when the email maps to a confirmed user and the call attached them to the org directly. Both boolean flags default to absent (treat absence as false).
 type CreateOrgInviteResponse = UserInviteResponse
 
 type CreateOrgInviteErrorResponse = BadRequest
 
+// CancelOrgInviteResponse Response from creating or processing an invitation. `userID` is always returned. `inviteID` is returned when an actual invite row was created; absent when the email already maps to a confirmed user. `addedToOrg: true` is returned only on the org-scoped path (POST /orgs/{org_id}/invites) when the email maps to a confirmed user and the call attached them to the org directly. Both boolean flags default to absent (treat absence as false).
 type CancelOrgInviteResponse = UserInviteResponse
 
 type CancelOrgInviteErrorResponse = Unauthorized
+
+// ResendOrgInviteResponse Response from POST /orgs/{org_id}/invites/{invite_id}/resend.
+type ResendOrgInviteResponse = ResendInviteResponse
+
+type ResendOrgInviteErrorResponse = BadRequest
 
 type ListTeamsResponse struct {
 	Teams []Team `json:"teams" validate:"required"`
@@ -417,6 +429,11 @@ type AddTeamUserErrorResponse = Unauthorized
 type RemoveTeamUserResponse = EmptyResponse
 
 type RemoveTeamUserErrorResponse = Unauthorized
+
+// CreateOrglessInviteResponse Response from creating or processing an invitation. `userID` is always returned. `inviteID` is returned when an actual invite row was created; absent when the email already maps to a confirmed user. `addedToOrg: true` is returned only on the org-scoped path (POST /orgs/{org_id}/invites) when the email maps to a confirmed user and the call attached them to the org directly. Both boolean flags default to absent (treat absence as false).
+type CreateOrglessInviteResponse = UserInviteResponse
+
+type CreateOrglessInviteErrorResponse = BadRequest
 
 // JoinOrgResponse Response from accepting an invitation. Contains `resetPasswordToken` only when the user had no password set prior to acceptance; otherwise the server returns an empty body (decode as an empty object).
 type JoinOrgResponse = JoinResponse

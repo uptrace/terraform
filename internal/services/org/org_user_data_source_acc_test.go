@@ -92,22 +92,27 @@ func seedOrgUser(t *testing.T, orgIDStr *string, email, role string) {
 		t.Fatalf("invalid orgID %q: %v", *orgIDStr, err)
 	}
 	c := testutil.TestAccClient(t)
+	userRole := generated.UserRole(role)
 	inviteResp, err := c.API.CreateOrgInvite(context.Background(), &generated.CreateOrgInviteRequestOptions{
 		PathParams: &generated.CreateOrgInvitePath{OrgID: orgID},
 		Body: &generated.UserInviteCreateRequest{
 			Email: email,
-			Role:  generated.UserRole(role),
+			Role:  &userRole,
 		},
 	})
 	if err != nil {
 		t.Fatalf("seed org user: create invite: %v", err)
 	}
-	if inviteResp.Invite.State == generated.Accepted {
+	if inviteResp.AddedToOrg != nil && *inviteResp.AddedToOrg {
 		return
 	}
-	if _, err := c.API.JoinOrg(context.Background(), &generated.JoinOrgRequestOptions{
-		PathParams: &generated.JoinOrgPath{InviteID: inviteResp.Invite.ID},
+	if _, err := c.API.CreateOrgUser(context.Background(), &generated.CreateOrgUserRequestOptions{
+		PathParams: &generated.CreateOrgUserPath{OrgID: orgID},
+		Body: &generated.OrgUserCreateRequest{
+			UserID: inviteResp.UserID,
+			Role:   userRole,
+		},
 	}); err != nil {
-		t.Fatalf("seed org user: join org: %v", err)
+		t.Fatalf("seed org user: create org_user: %v", err)
 	}
 }

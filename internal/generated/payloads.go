@@ -174,6 +174,9 @@ type UpdateOrgBudgetBody = OrgUpdateBudgetRequest
 
 type CreateProjectBody = ProjectCreateRequest
 
+// CreateOrgUserBody Body for POST /orgs/{org_id}/users. Creates an OrgUser membership for an existing User by ID. Idempotent — re-posting the same userId updates the role.
+type CreateOrgUserBody = OrgUserCreateRequest
+
 type UpdateOrgUserRoleBody = OrgUserRoleUpdateRequest
 
 type UpdateOrgUserProjectPermBody = OrgUserProjectUpdateRequest
@@ -187,6 +190,9 @@ type UpdateTeamBody = TeamUpdateRequest
 
 // AddTeamProjectBody Request body for adding a project to a team. A non-empty JSON body is required so the server can decode it. The `permLevel` field is accepted but currently ignored by the backend.
 type AddTeamProjectBody = TeamProjectAddRequest
+
+// CreateOrglessInviteBody Body for the top-level POST /invites (Terraform path). Only `email` is accepted; `role` and `teamIds` would be meaningless without an org.
+type CreateOrglessInviteBody = OrglessUserInviteCreateRequest
 
 type UpdateProjectBody = ProjectCreateRequest
 

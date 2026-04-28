@@ -9,6 +9,7 @@ import (
 	"github.com/uptrace/terraform/internal/services/org"
 	"github.com/uptrace/terraform/internal/services/project"
 	"github.com/uptrace/terraform/internal/services/team"
+	"github.com/uptrace/terraform/internal/services/user"
 )
 
 // ServiceRegistration is implemented by every service package under
@@ -25,4 +26,5 @@ var services = []ServiceRegistration{
 	org.Registration{},
 	project.Registration{},
 	team.Registration{},
+	user.Registration{},
 }

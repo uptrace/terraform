@@ -564,6 +564,15 @@ func (l ListOrgUsersPath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(l))
 }
 
+type CreateOrgUserPath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+}
+
+func (c CreateOrgUserPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(c))
+}
+
 type GetOrgUserPath struct {
 	// OrgID Organization ID.
 	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
@@ -643,6 +652,18 @@ type CancelOrgInvitePath struct {
 
 func (c CancelOrgInvitePath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(c))
+}
+
+type ResendOrgInvitePath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+
+	// InviteID Invitation ID (32-character hex string).
+	InviteID InviteID `json:"invite_id" jsonschema:"Invitation ID (32-character hex string)." validate:"required"`
+}
+
+func (r ResendOrgInvitePath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(r))
 }
 
 type ListTeamsPath struct {

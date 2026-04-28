@@ -1011,22 +1011,22 @@ func (u UserRole) Validate() error {
 	}
 }
 
-// InviteState Lifecycle state of an organization invitation.
-type InviteState string
+// InviteStatus Lifecycle status of an organization invitation.
+type InviteStatus string
 
 const (
-	Accepted InviteState = "accepted"
-	Canceled InviteState = "canceled"
-	Expired  InviteState = "expired"
-	Sent     InviteState = "sent"
+	Accepted InviteStatus = "accepted"
+	Canceled InviteStatus = "canceled"
+	Expired  InviteStatus = "expired"
+	Sent     InviteStatus = "sent"
 )
 
-// Validate checks if the InviteState value is valid
-func (i InviteState) Validate() error {
+// Validate checks if the InviteStatus value is valid
+func (i InviteStatus) Validate() error {
 	switch i {
 	case Accepted, Canceled, Expired, Sent:
 		return nil
 	default:
-		return runtime.NewValidationErrorsFromString("Enum", fmt.Sprintf("must be a valid InviteState value, got: %v", i))
+		return runtime.NewValidationErrorsFromString("Enum", fmt.Sprintf("must be a valid InviteStatus value, got: %v", i))
 	}
 }

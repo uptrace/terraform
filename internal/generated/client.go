@@ -196,6 +196,9 @@ type ClientInterface interface {
 	// ListOrgUsers List organization users
 	ListOrgUsers(ctx context.Context, options *ListOrgUsersRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListOrgUsersResponse, error)
 
+	// CreateOrgUser Add organization user by ID
+	CreateOrgUser(ctx context.Context, options *CreateOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CreateOrgUserResponse, error)
+
 	// GetOrgUser Get organization user
 	GetOrgUser(ctx context.Context, options *GetOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*GetOrgUserResponse, error)
 
@@ -216,6 +219,9 @@ type ClientInterface interface {
 
 	// CancelOrgInvite Cancel organization invitation
 	CancelOrgInvite(ctx context.Context, options *CancelOrgInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CancelOrgInviteResponse, error)
+
+	// ResendOrgInvite Resend organization invitation
+	ResendOrgInvite(ctx context.Context, options *ResendOrgInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ResendOrgInviteResponse, error)
 
 	// ListTeams List organization teams
 	ListTeams(ctx context.Context, options *ListTeamsRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListTeamsResponse, error)
@@ -249,6 +255,9 @@ type ClientInterface interface {
 
 	// RemoveTeamUser Remove user from team
 	RemoveTeamUser(ctx context.Context, options *RemoveTeamUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*RemoveTeamUserResponse, error)
+
+	// CreateOrglessInvite Create org-less user invitation (Terraform)
+	CreateOrglessInvite(ctx context.Context, options *CreateOrglessInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CreateOrglessInviteResponse, error)
 
 	// JoinOrg Accept organization invitation
 	JoinOrg(ctx context.Context, options *JoinOrgRequestOptions, reqEditors ...runtime.RequestEditorFn) (*JoinOrgResponse, error)
@@ -2719,6 +2728,51 @@ func (c *Client) ListOrgUsers(ctx context.Context, options *ListOrgUsersRequestO
 	return responseParser(ctx, resp)
 }
 
+// CreateOrgUser Add organization user by ID
+func (c *Client) CreateOrgUser(ctx context.Context, options *CreateOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CreateOrgUserResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL:  c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/users",
+		Method:      "POST",
+		Options:     options,
+		ContentType: "application/json",
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*CreateOrgUserResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(CreateOrgUserErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(CreateOrgUserResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/users")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
 // GetOrgUser Get organization user
 func (c *Client) GetOrgUser(ctx context.Context, options *GetOrgUserRequestOptions, reqEditors ...runtime.RequestEditorFn) (*GetOrgUserResponse, error) {
 	var err error
@@ -3024,6 +3078,50 @@ func (c *Client) CancelOrgInvite(ctx context.Context, options *CancelOrgInviteRe
 	}
 
 	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/invites/{invite_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// ResendOrgInvite Resend organization invitation
+func (c *Client) ResendOrgInvite(ctx context.Context, options *ResendOrgInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ResendOrgInviteResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/orgs/{org_id}/invites/{invite_id}/resend",
+		Method:     "POST",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*ResendOrgInviteResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(ResendOrgInviteErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(ResendOrgInviteResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/invites/{invite_id}/resend")
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}
@@ -3511,6 +3609,51 @@ func (c *Client) RemoveTeamUser(ctx context.Context, options *RemoveTeamUserRequ
 	}
 
 	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/orgs/{org_id}/teams/{team_id}/users/{org_user_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// CreateOrglessInvite Create org-less user invitation (Terraform)
+func (c *Client) CreateOrglessInvite(ctx context.Context, options *CreateOrglessInviteRequestOptions, reqEditors ...runtime.RequestEditorFn) (*CreateOrglessInviteResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL:  c.apiClient.GetBaseURL() + "/internal/v1/invites",
+		Method:      "POST",
+		Options:     options,
+		ContentType: "application/json",
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*CreateOrglessInviteResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(CreateOrglessInviteErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(CreateOrglessInviteResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/invites")
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}
