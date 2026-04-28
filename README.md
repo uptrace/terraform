@@ -158,6 +158,40 @@ Manages an ingest token for an Uptrace project.
 
 Import with `<project_id>:<token_id>`.
 
+### uptrace_user / uptrace_org_user
+
+The two resources together let you declare org membership end-to-end from Terraform.
+
+`uptrace_user` issues an orgless invite that pre-creates a global User row and returns its numeric ID. `uptrace_org_user` then attaches that user to a specific organization with a role.
+
+#### uptrace_user
+
+Manages a global Uptrace user. Creation issues an orgless invite that pre-creates the User row server-side and returns its ID; pair with `uptrace_org_user` to grant org membership.
+
+Requires a SuperAdmin token: the user owning `UPTRACE_TOKEN` must have `super_admin = TRUE`. The backend returns `403 you cannot access this resource` otherwise. Owner role on an org is **not** sufficient — `super_admin` is a separate user-level flag.
+
+| Field | Type   | Required | Note                                                                       |
+|-------|--------|----------|----------------------------------------------------------------------------|
+| email | string | yes      | Must be lowercase and trimmed. Forces replacement on change.               |
+| id    | string | computed | Numeric user ID returned by the backend.                                   |
+
+Email is immutable; changing it forces recreation. Delete removes the resource from Terraform state only — the underlying User row and any pending invite remain on the server, since the API has no global user-delete endpoint. Drift detection is not implemented: out-of-band changes to the underlying user are not reflected in plan output.
+
+Import with `<user_id>`.
+
+#### uptrace_org_user
+
+Adds an existing user to an organization with a role. Idempotent — creating twice updates the role server-side. Pair with `uptrace_user` to manage the underlying user.
+
+| Field   | Type   | Required | Note                                                                                   |
+|---------|--------|----------|----------------------------------------------------------------------------------------|
+| org_id  | string | yes      | Forces replacement on change.                                                          |
+| user_id | string | yes      | Forces replacement on change.                                                          |
+| role    | string | yes      | One of `owner`, `admin`, `member`, `viewer`, `billing_manager`, `collaborator`. Updatable. |
+| id      | string | computed | OrgUser ID. Use where another resource wants an `org_user_id` (e.g. `uptrace_team_user`). |
+
+Import with `<org_id>:<org_user_id>`.
+
 ### uptrace_team / uptrace_team_project / uptrace_team_user
 
 Teams group users for project-scoped access control within an organization. Teams are a Premium feature; the backend returns `403` for unlicensed organizations.
@@ -194,7 +228,7 @@ Import with `<org_id>:<team_id>:<project_id>`.
 
 Adds an organization user to a team. Idempotent. There is no update — changing any field forces replacement.
 
-`org_user_id` is the ID of the OrgUser record linking the user to the organization (not the User ID). The API does not expose a way to create OrgUsers; invite users through the Uptrace UI first, then reference the resulting `org_user_id` here.
+`org_user_id` is the ID of the OrgUser record linking the user to the organization (not the User ID). Either reference an existing membership via the `uptrace_org_user` data source, or create the membership in-place with the `uptrace_org_user` resource.
 
 | Field       | Type   | Required | Note                                             |
 |-------------|--------|----------|--------------------------------------------------|

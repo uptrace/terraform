@@ -1,0 +1,107 @@
+package org_test
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/uptrace/terraform/internal/client"
+	"github.com/uptrace/terraform/internal/generated"
+	"github.com/uptrace/terraform/internal/testutil"
+)
+
+func orgUserResourcePreCheck(t *testing.T) string {
+	t.Helper()
+	v := os.Getenv("UPTRACE_TEST_USER_EMAIL_PREFIX")
+	if v == "" {
+		t.Skip("UPTRACE_TEST_USER_EMAIL_PREFIX must be set to run uptrace_org_user acceptance tests")
+	}
+	if !strings.Contains(v, "@") {
+		t.Fatalf("UPTRACE_TEST_USER_EMAIL_PREFIX must contain @: %q", v)
+	}
+	return v
+}
+
+func testAccOrgUserConfig(orgName, email, role string) string {
+	return fmt.Sprintf(`
+resource "uptrace_org" "test" {
+  name = %q
+}
+
+resource "uptrace_user" "test" {
+  email = %q
+}
+
+resource "uptrace_org_user" "test" {
+  org_id  = uptrace_org.test.id
+  user_id = uptrace_user.test.id
+  role    = %q
+}
+`, orgName, email, role)
+}
+
+func testAccCheckOrgUserDestroy(t *testing.T) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		c := testutil.TestAccClient(t)
+		for _, rs := range s.RootModule().Resources {
+			if rs.Type != "uptrace_org_user" {
+				continue
+			}
+			orgID, err := strconv.ParseUint(rs.Primary.Attributes["org_id"], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid org_id: %w", err)
+			}
+			orgUserID, err := strconv.ParseUint(rs.Primary.Attributes["id"], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid id: %w", err)
+			}
+			_, err = c.API.GetOrgUser(context.Background(), &generated.GetOrgUserRequestOptions{
+				PathParams: &generated.GetOrgUserPath{OrgID: orgID, OrgUserID: orgUserID},
+			})
+			if err == nil {
+				return fmt.Errorf("org_user %d still exists in org %d after destroy", orgUserID, orgID)
+			}
+			if !client.IsNotFound(err) {
+				return fmt.Errorf("get org_user after destroy: %w", err)
+			}
+		}
+		return nil
+	}
+}
+
+func TestAccOrgUser_basic(t *testing.T) {
+	prefix := orgUserResourcePreCheck(t)
+	parts := strings.SplitN(prefix, "@", 2)
+	email := strings.ToLower(parts[0] + "+acc-org-user-" + strconv.FormatInt(int64(os.Getpid()), 10) + "@" + parts[1])
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.PreCheck(t) },
+		ProtoV6ProviderFactories: testutil.ProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckOrgUserDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOrgUserConfig("acc-ou-org", email, "member"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("uptrace_org_user.test", "id"),
+					resource.TestCheckResourceAttr("uptrace_org_user.test", "role", "member"),
+				),
+			},
+			{
+				Config: testAccOrgUserConfig("acc-ou-org", email, "admin"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("uptrace_org_user.test", "role", "admin"),
+				),
+			},
+			{
+				Config:   testAccOrgUserConfig("acc-ou-org", email, "admin"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
