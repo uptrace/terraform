@@ -168,7 +168,7 @@ The two resources together let you declare org membership end-to-end from Terraf
 
 Manages a global Uptrace user. Creation issues an orgless invite that pre-creates the User row server-side and returns its ID; pair with `uptrace_org_user` to grant org membership.
 
-Any authenticated token can create users. The backend sends an account-invitation email to the recipient with a link to confirm the email and set a password. If the email already maps to a confirmed user, no invite is created and the existing user ID is returned.
+Any authenticated token can create users. The backend sends an account-invitation email to the recipient with a link to confirm the email and set a password. If the email already maps to a confirmed user, no invite is created and the existing user ID is returned — `apply` adopts existing users by email, so importing is unnecessary and not supported.
 
 | Field | Type   | Required | Note                                                                       |
 |-------|--------|----------|----------------------------------------------------------------------------|
@@ -176,8 +176,6 @@ Any authenticated token can create users. The backend sends an account-invitatio
 | id    | string | computed | Numeric user ID returned by the backend.                                   |
 
 Email is immutable; changing it forces recreation. Delete removes the resource from Terraform state only — the underlying User row and any pending invite remain on the server, since the API has no global user-delete endpoint. Drift detection is not implemented: out-of-band changes to the underlying user are not reflected in plan output.
-
-Import with `<user_id>`.
 
 #### uptrace_org_user
 

@@ -55,12 +55,6 @@ func TestAccUser_basic(t *testing.T) {
 				Config:   testAccUserConfig(email),
 				PlanOnly: true,
 			},
-			{
-				ResourceName:            "uptrace_user.test",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"email"},
-			},
 		},
 	})
 }

@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -20,9 +19,8 @@ import (
 )
 
 var (
-	_ resource.Resource                = &UserResource{}
-	_ resource.ResourceWithConfigure   = &UserResource{}
-	_ resource.ResourceWithImportState = &UserResource{}
+	_ resource.Resource              = &UserResource{}
+	_ resource.ResourceWithConfigure = &UserResource{}
 )
 
 // UserResource manages an Uptrace user (orgless). Creation issues an
@@ -47,7 +45,7 @@ func (r *UserResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 func (r *UserResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a global Uptrace user. Creation issues an orgless invite that pre-creates the User row server-side and returns its ID. Pair with `uptrace_org_user` to grant org membership.\n\nAny authenticated token can create users. The backend sends an account-invitation email to the recipient with a link to confirm the email and set a password. If the email already maps to a confirmed user, no invite is created and the existing user ID is returned.\n\nEmail is immutable; changing it forces recreation. Delete removes the resource from Terraform state only — the underlying User row and any pending invite remain on the server, since the API has no global user-delete endpoint. Drift detection is not implemented: out-of-band changes to the underlying user are not reflected in plan output.",
+		Description: "Manages a global Uptrace user. Creation issues an orgless invite that pre-creates the User row server-side and returns its ID. Pair with `uptrace_org_user` to grant org membership.\n\nAny authenticated token can create users. The backend sends an account-invitation email to the recipient with a link to confirm the email and set a password. If the email already maps to a confirmed user, no invite is created and the existing user ID is returned — `apply` adopts existing users by email, so importing is unnecessary and not supported.\n\nEmail is immutable; changing it forces recreation. Delete removes the resource from Terraform state only — the underlying User row and any pending invite remain on the server, since the API has no global user-delete endpoint. Drift detection is not implemented: out-of-band changes to the underlying user are not reflected in plan output.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -125,8 +123,4 @@ func (r *UserResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 	tflog.Info(ctx, "deleting user (no-op; backend has no global user-delete endpoint)",
 		map[string]any{"id": state.ID.ValueString()})
-}
-
-func (r *UserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

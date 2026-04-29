@@ -51,7 +51,7 @@ func TestRetryableHTTPClientRetriesOnlySafeMethodsAfterTransportError(t *testing
 
 			resp, err := (&httpDoerAdapter{client: rc.StandardClient()}).Do(context.Background(), req)
 			if resp != nil {
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 			}
 
 			if tt.wantErr {
@@ -105,7 +105,7 @@ func TestRetryableHTTPClientRetriesOnlySafeMethodsAfterServerError(t *testing.T)
 
 			resp, err := (&httpDoerAdapter{client: rc.StandardClient()}).Do(context.Background(), req)
 			require.NoError(t, err)
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			require.Equal(t, tt.wantStatus, resp.StatusCode)
 			require.Equal(t, tt.wantCalls, calls.Load())
