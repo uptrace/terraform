@@ -33,6 +33,13 @@ func PreCheck(t *testing.T) {
 	}
 }
 
+// AcceptanceTestUserEmail returns a clearly-marked email address for tests that
+// need to create an Uptrace user. The pid suffix avoids collisions between
+// concurrent acceptance-test processes.
+func AcceptanceTestUserEmail(tag string) string {
+	return fmt.Sprintf("terraform-acceptance-tests+%s-%d@example.com", tag, os.Getpid())
+}
+
 // CaptureAttr returns a TestCheckFunc that copies an attribute value from a
 // resource's primary state into dest. Use it to thread an attribute between
 // acceptance-test steps (e.g. to delete the resource out-of-band by ID).

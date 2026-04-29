@@ -3,9 +3,7 @@ package team_test
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -15,29 +13,6 @@ import (
 	"github.com/uptrace/terraform/internal/generated"
 	"github.com/uptrace/terraform/internal/testutil"
 )
-
-// teamUserPreCheck reads UPTRACE_TEST_USER_EMAIL_PREFIX. Skips when unset,
-// fails fast when the value lacks an `@`. Returns the prefix verbatim;
-// callers append a per-test, per-pid tag to avoid colliding with prior runs.
-// Uses only t.Skip (not t.Fatal), which is safe when TF_ACC is unset.
-func teamUserPreCheck(t *testing.T) string {
-	t.Helper()
-	v := os.Getenv("UPTRACE_TEST_USER_EMAIL_PREFIX")
-	if v == "" {
-		t.Skip("UPTRACE_TEST_USER_EMAIL_PREFIX must be set to run uptrace_team_user acceptance tests")
-	}
-	if !strings.Contains(v, "@") {
-		t.Fatalf("UPTRACE_TEST_USER_EMAIL_PREFIX must contain @: %q", v)
-	}
-	return v
-}
-
-// teamUserUniqueEmail builds a `<local>+<tag>-<pid>@<domain>` email so each
-// test gets a fresh inviter target and concurrent processes don't collide.
-func teamUserUniqueEmail(prefix, tag string) string {
-	parts := strings.SplitN(prefix, "@", 2)
-	return strings.ToLower(parts[0] + "+" + tag + "-" + strconv.FormatInt(int64(os.Getpid()), 10) + "@" + parts[1])
-}
 
 // testAccTeamUserConfig mirrors examples/resources/uptrace_team_user/resource.tf:
 // org → team → user → org_user → team_user, all created inline so the test
@@ -111,8 +86,7 @@ func testAccCheckTeamUserDestroy(t *testing.T) resource.TestCheckFunc {
 }
 
 func TestAccTeamUser_basic(t *testing.T) {
-	prefix := teamUserPreCheck(t)
-	email := teamUserUniqueEmail(prefix, "acc-team-user")
+	email := testutil.AcceptanceTestUserEmail("acc-team-user")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.PreCheck(t) },
@@ -144,8 +118,7 @@ func TestAccTeamUser_basic(t *testing.T) {
 }
 
 func TestAccTeamUser_disappearsOutOfBand(t *testing.T) {
-	prefix := teamUserPreCheck(t)
-	email := teamUserUniqueEmail(prefix, "acc-team-user-gone")
+	email := testutil.AcceptanceTestUserEmail("acc-team-user-gone")
 
 	config := testAccTeamUserConfig("acc-tu-gone-org", "acc-tu-gone-team", email)
 	var orgIDAttr, teamIDAttr, orgUserIDAttr string
