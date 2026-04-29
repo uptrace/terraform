@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 
 	"github.com/uptrace/terraform/internal/testutil"
 )
@@ -19,6 +20,8 @@ resource "uptrace_user" "test" {
 
 func TestAccUser_basic(t *testing.T) {
 	email := testutil.AcceptanceTestUserEmail("acc-user")
+	updatedEmail := testutil.AcceptanceTestUserEmail("acc-user-updated")
+	var originalID string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.PreCheck(t) },
@@ -29,10 +32,33 @@ func TestAccUser_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("uptrace_user.test", "email", email),
 					resource.TestCheckResourceAttrSet("uptrace_user.test", "id"),
+					testutil.CaptureAttr("uptrace_user.test", "id", &originalID),
 				),
 			},
 			{
 				Config:   testAccUserConfig(email),
+				PlanOnly: true,
+			},
+			{
+				Config: testAccUserConfig(updatedEmail),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("uptrace_user.test", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("uptrace_user.test", "email", updatedEmail),
+					resource.TestCheckResourceAttrSet("uptrace_user.test", "id"),
+					resource.TestCheckResourceAttrWith("uptrace_user.test", "id", func(id string) error {
+						if id == originalID {
+							return fmt.Errorf("expected email change to replace user ID %q", id)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config:   testAccUserConfig(updatedEmail),
 				PlanOnly: true,
 			},
 		},
