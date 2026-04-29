@@ -809,6 +809,103 @@ func (o *DeleteMonitorRequestOptions) GetHeader() (map[string]string, error) {
 	return nil, nil
 }
 
+// ActivateMonitorRequestOptions is the options needed to make a request to ActivateMonitor.
+type ActivateMonitorRequestOptions struct {
+	PathParams *ActivateMonitorPath
+}
+
+// Validate validates all the fields in the options.
+// Use it if fields validation was not run.
+func (o *ActivateMonitorRequestOptions) Validate() error {
+	var errors runtime.ValidationErrors
+
+	if o.PathParams != nil {
+		if v, ok := any(o.PathParams).(runtime.Validator); ok {
+			if err := v.Validate(); err != nil {
+				errors = errors.Append("PathParams", err)
+			}
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+
+	return errors
+}
+
+// GetPathParams returns the path params as a map.
+func (o *ActivateMonitorRequestOptions) GetPathParams() (map[string]any, error) {
+	return runtime.AsMap[any](o.PathParams)
+}
+
+// GetQuery returns the query params as a map.
+func (o *ActivateMonitorRequestOptions) GetQuery() (map[string]any, error) {
+	return nil, nil
+}
+
+// GetBody returns the payload in any type that can be marshalled to JSON by the client.
+func (o *ActivateMonitorRequestOptions) GetBody() any {
+	return nil
+}
+
+// GetHeader returns the headers as a map.
+func (o *ActivateMonitorRequestOptions) GetHeader() (map[string]string, error) {
+	return nil, nil
+}
+
+// PauseMonitorRequestOptions is the options needed to make a request to PauseMonitor.
+type PauseMonitorRequestOptions struct {
+	PathParams *PauseMonitorPath
+	Body       *PauseMonitorBody
+}
+
+// Validate validates all the fields in the options.
+// Use it if fields validation was not run.
+func (o *PauseMonitorRequestOptions) Validate() error {
+	var errors runtime.ValidationErrors
+
+	if o.PathParams != nil {
+		if v, ok := any(o.PathParams).(runtime.Validator); ok {
+			if err := v.Validate(); err != nil {
+				errors = errors.Append("PathParams", err)
+			}
+		}
+	}
+
+	if o.Body != nil {
+		if v, ok := any(o.Body).(runtime.Validator); ok {
+			if err := v.Validate(); err != nil {
+				errors = errors.Append("Body", err)
+			}
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+
+	return errors
+}
+
+// GetPathParams returns the path params as a map.
+func (o *PauseMonitorRequestOptions) GetPathParams() (map[string]any, error) {
+	return runtime.AsMap[any](o.PathParams)
+}
+
+// GetQuery returns the query params as a map.
+func (o *PauseMonitorRequestOptions) GetQuery() (map[string]any, error) {
+	return nil, nil
+}
+
+// GetBody returns the payload in any type that can be marshalled to JSON by the client.
+func (o *PauseMonitorRequestOptions) GetBody() any {
+	return o.Body
+}
+
+// GetHeader returns the headers as a map.
+func (o *PauseMonitorRequestOptions) GetHeader() (map[string]string, error) {
+	return nil, nil
+}
+
 // ListDashboardsRequestOptions is the options needed to make a request to ListDashboards.
 type ListDashboardsRequestOptions struct {
 	PathParams *ListDashboardsPath

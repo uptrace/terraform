@@ -3188,11 +3188,6 @@ func (o OrgUserCreateResponse) Validate() error {
 	return errors
 }
 
-// OrgUserDeleteResponse Response from DELETE /orgs/{org_id}/users/{org_user_id}.
-type OrgUserDeleteResponse struct {
-	Deleted bool `json:"deleted"`
-}
-
 // ResendInviteResponse Response from POST /orgs/{org_id}/invites/{invite_id}/resend.
 type ResendInviteResponse struct {
 	Ok bool `json:"ok"`

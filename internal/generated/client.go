@@ -79,6 +79,12 @@ type ClientInterface interface {
 	// DeleteMonitor Delete a monitor
 	DeleteMonitor(ctx context.Context, options *DeleteMonitorRequestOptions, reqEditors ...runtime.RequestEditorFn) (*DeleteMonitorResponse, error)
 
+	// ActivateMonitor Activate a monitor
+	ActivateMonitor(ctx context.Context, options *ActivateMonitorRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ActivateMonitorResponse, error)
+
+	// PauseMonitor Pause a monitor
+	PauseMonitor(ctx context.Context, options *PauseMonitorRequestOptions, reqEditors ...runtime.RequestEditorFn) (*PauseMonitorResponse, error)
+
 	// ListDashboards List dashboards
 	ListDashboards(ctx context.Context, options *ListDashboardsRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ListDashboardsResponse, error)
 
@@ -1008,6 +1014,95 @@ func (c *Client) DeleteMonitor(ctx context.Context, options *DeleteMonitorReques
 	}
 
 	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/monitors/{project_id}/{monitor_id}")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// ActivateMonitor Activate a monitor
+func (c *Client) ActivateMonitor(ctx context.Context, options *ActivateMonitorRequestOptions, reqEditors ...runtime.RequestEditorFn) (*ActivateMonitorResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL: c.apiClient.GetBaseURL() + "/internal/v1/monitors/{project_id}/{monitor_id}/active",
+		Method:     "PUT",
+		Options:    options,
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*ActivateMonitorResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(ActivateMonitorErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(ActivateMonitorResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/monitors/{project_id}/{monitor_id}/active")
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	return responseParser(ctx, resp)
+}
+
+// PauseMonitor Pause a monitor
+func (c *Client) PauseMonitor(ctx context.Context, options *PauseMonitorRequestOptions, reqEditors ...runtime.RequestEditorFn) (*PauseMonitorResponse, error) {
+	var err error
+	reqParams := runtime.RequestOptionsParameters{
+		RequestURL:  c.apiClient.GetBaseURL() + "/internal/v1/monitors/{project_id}/{monitor_id}/paused",
+		Method:      "PUT",
+		Options:     options,
+		ContentType: "application/json",
+	}
+
+	req, err := c.apiClient.CreateRequest(ctx, reqParams, reqEditors...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	responseParser := func(ctx context.Context, resp *runtime.Response) (*PauseMonitorResponse, error) {
+		bodyBytes := resp.Content
+		if resp.StatusCode != 200 {
+			target := new(PauseMonitorErrorResponse)
+			err = json.Unmarshal(bodyBytes, target)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding response: %w", err)
+			}
+
+			if errTarget, ok := any(*target).(error); ok {
+				return nil, runtime.NewClientAPIError(errTarget, runtime.WithStatusCode(resp.StatusCode))
+			}
+			return nil, runtime.NewClientAPIError(fmt.Errorf("API error (status %d): %v", resp.StatusCode, *target),
+				runtime.WithStatusCode(resp.StatusCode))
+		}
+		target := new(PauseMonitorResponse)
+		if err = json.Unmarshal(bodyBytes, target); err != nil {
+			err = fmt.Errorf("error decoding response: %w", err)
+			return nil, err
+		}
+		return target, nil
+	}
+
+	resp, err := c.apiClient.ExecuteRequest(ctx, req, "/internal/v1/monitors/{project_id}/{monitor_id}/paused")
 	if err != nil {
 		return nil, fmt.Errorf("error executing request: %w", err)
 	}

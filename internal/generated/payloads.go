@@ -124,6 +124,15 @@ func (u *UpdateMonitorBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type PauseMonitorBody struct {
+	// Duration Pause duration in nanoseconds. Minimum 1 hour (3600000000000 ns). Omit for an indefinite pause.
+	Duration *int64 `json:"duration,omitempty" jsonschema:"Pause duration in nanoseconds. Minimum 1 hour (3600000000000 ns). Omit for an indefinite pause." validate:"omitempty,gte=3600000000000"`
+}
+
+func (p PauseMonitorBody) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(p))
+}
+
 // CreateDashboardFromYamlBody YAML dashboard definition.
 type CreateDashboardFromYamlBody = string
 

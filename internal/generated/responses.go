@@ -163,6 +163,14 @@ type DeleteMonitorResponse = MonitorResponse
 
 type DeleteMonitorErrorResponse = BadRequest
 
+type ActivateMonitorResponse = MonitorResponse
+
+type ActivateMonitorErrorResponse = BadRequest
+
+type PauseMonitorResponse = MonitorResponse
+
+type PauseMonitorErrorResponse = BadRequest
+
 type ListDashboardsResponse struct {
 	Dashboards []Dashboard `json:"dashboards" validate:"required"`
 
@@ -347,8 +355,8 @@ type UpdateOrgUserRoleResponse = OrgUserResponse
 
 type UpdateOrgUserRoleErrorResponse = BadRequest
 
-// RemoveOrgUserResponse Response from DELETE /orgs/{org_id}/users/{org_user_id}.
-type RemoveOrgUserResponse = OrgUserDeleteResponse
+// RemoveOrgUserResponse Empty JSON object `{}`. Returned by operations that have no resource to return on success.
+type RemoveOrgUserResponse = EmptyResponse
 
 type RemoveOrgUserErrorResponse = Unauthorized
 

@@ -156,6 +156,30 @@ func (d DeleteMonitorPath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(d))
 }
 
+type ActivateMonitorPath struct {
+	// ProjectID Uptrace project ID.
+	ProjectID ProjectID `json:"project_id" jsonschema:"Uptrace project ID." validate:"required"`
+
+	// MonitorID Monitor ID.
+	MonitorID MonitorID `json:"monitor_id" jsonschema:"Monitor ID." validate:"required"`
+}
+
+func (a ActivateMonitorPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(a))
+}
+
+type PauseMonitorPath struct {
+	// ProjectID Uptrace project ID.
+	ProjectID ProjectID `json:"project_id" jsonschema:"Uptrace project ID." validate:"required"`
+
+	// MonitorID Monitor ID.
+	MonitorID MonitorID `json:"monitor_id" jsonschema:"Monitor ID." validate:"required"`
+}
+
+func (p PauseMonitorPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(p))
+}
+
 type ListDashboardsPath struct {
 	// ProjectID Uptrace project ID.
 	ProjectID ProjectID `json:"project_id" jsonschema:"Uptrace project ID." validate:"required"`

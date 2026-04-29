@@ -168,7 +168,7 @@ The two resources together let you declare org membership end-to-end from Terraf
 
 Manages a global Uptrace user. Creation issues an orgless invite that pre-creates the User row server-side and returns its ID; pair with `uptrace_org_user` to grant org membership.
 
-Requires a SuperAdmin token: the user owning `UPTRACE_TOKEN` must have `super_admin = TRUE`. The backend returns `403 you cannot access this resource` otherwise. Owner role on an org is **not** sufficient — `super_admin` is a separate user-level flag.
+Any authenticated token can create users. The backend sends an account-invitation email to the recipient with a link to confirm the email and set a password. If the email already maps to a confirmed user, no invite is created and the existing user ID is returned.
 
 | Field | Type   | Required | Note                                                                       |
 |-------|--------|----------|----------------------------------------------------------------------------|
