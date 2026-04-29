@@ -18,6 +18,8 @@ const (
 	retryWaitMax          = 5 * time.Second
 )
 
+type retryMethodContextKey struct{}
+
 // Client wraps the generated OpenAPI client with retry and auth configuration.
 type Client struct {
 	// API is the oapi-codegen generated client for all spec-defined endpoints.
@@ -26,11 +28,7 @@ type Client struct {
 
 // New creates a client with retryable HTTP transport and bearer token auth.
 func New(endpoint, token string) (*Client, error) {
-	rc := retryablehttp.NewClient()
-	rc.HTTPClient = &http.Client{Timeout: defaultRequestTimeout}
-	rc.RetryMax = maxRetries
-	rc.RetryWaitMax = retryWaitMax
-	rc.Logger = nil
+	rc := newRetryableHTTPClient()
 
 	bearerAuth := func(_ context.Context, req *http.Request) error {
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -49,6 +47,45 @@ func New(endpoint, token string) (*Client, error) {
 	return &Client{
 		API: generated.NewClient(apiClient),
 	}, nil
+}
+
+func newRetryableHTTPClient() *retryablehttp.Client {
+	rc := retryablehttp.NewClient()
+	rc.HTTPClient = &http.Client{Timeout: defaultRequestTimeout}
+	rc.RetryMax = maxRetries
+	rc.RetryWaitMax = retryWaitMax
+	rc.CheckRetry = retryPolicyForSafeMethods
+	rc.Logger = nil
+	return rc
+}
+
+func retryPolicyForSafeMethods(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+	if !isSafeHTTPMethod(retryRequestMethod(ctx, resp)) {
+		return false, nil
+	}
+	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+}
+
+func retryRequestMethod(ctx context.Context, resp *http.Response) string {
+	if method, ok := ctx.Value(retryMethodContextKey{}).(string); ok {
+		return method
+	}
+	if resp != nil && resp.Request != nil {
+		return resp.Request.Method
+	}
+	return ""
+}
+
+func isSafeHTTPMethod(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
+		return true
+	default:
+		return false
+	}
 }
 
 // IsNotFound reports whether err is an API 404 error.
@@ -100,5 +137,6 @@ type httpDoerAdapter struct {
 }
 
 func (a *httpDoerAdapter) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	ctx = context.WithValue(ctx, retryMethodContextKey{}, req.Method)
 	return a.client.Do(req.WithContext(ctx))
 }
