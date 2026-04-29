@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLowercaseEmailValidator_RejectsMixedCase(t *testing.T) {
+func TestLowercaseEmailValidator_rejectsMixedCase(t *testing.T) {
 	var resp validator.StringResponse
 	LowercaseEmailValidator{}.ValidateString(context.Background(), validator.StringRequest{
 		Path:        path.Root("email"),
@@ -20,7 +20,7 @@ func TestLowercaseEmailValidator_RejectsMixedCase(t *testing.T) {
 	require.Contains(t, resp.Diagnostics.Errors()[0].Summary(), "email must be lowercase and trimmed")
 }
 
-func TestLowercaseEmailValidator_AcceptsNormalized(t *testing.T) {
+func TestLowercaseEmailValidator_acceptsNormalized(t *testing.T) {
 	var resp validator.StringResponse
 	LowercaseEmailValidator{}.ValidateString(context.Background(), validator.StringRequest{
 		Path:        path.Root("email"),
@@ -29,7 +29,7 @@ func TestLowercaseEmailValidator_AcceptsNormalized(t *testing.T) {
 	require.False(t, resp.Diagnostics.HasError())
 }
 
-func TestLowercaseEmailValidator_SkipsNullUnknown(t *testing.T) {
+func TestLowercaseEmailValidator_skipsNullUnknown(t *testing.T) {
 	var resp validator.StringResponse
 	LowercaseEmailValidator{}.ValidateString(context.Background(), validator.StringRequest{
 		Path:        path.Root("email"),

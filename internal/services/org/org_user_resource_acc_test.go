@@ -102,6 +102,25 @@ func TestAccOrgUser_basic(t *testing.T) {
 				Config:   testAccOrgUserConfig("acc-ou-org", email, "admin"),
 				PlanOnly: true,
 			},
+			{
+				ResourceName:      "uptrace_org_user.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: importOrgUserIDFunc("uptrace_org_user.test"),
+			},
 		},
 	})
+}
+
+func importOrgUserIDFunc(resourceAddr string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceAddr]
+		if !ok {
+			return "", fmt.Errorf("resource %s not found", resourceAddr)
+		}
+		return fmt.Sprintf("%s:%s",
+			rs.Primary.Attributes["org_id"],
+			rs.Primary.Attributes["id"],
+		), nil
+	}
 }

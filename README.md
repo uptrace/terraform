@@ -228,7 +228,7 @@ Import with `<org_id>:<team_id>:<project_id>`.
 
 Adds an organization user to a team. Idempotent. There is no update — changing any field forces replacement.
 
-`org_user_id` is the ID of the OrgUser record linking the user to the organization (not the User ID). Either reference an existing membership via the `uptrace_org_user` data source, or create the membership in-place with the `uptrace_org_user` resource.
+`org_user_id` is the ID of the OrgUser record linking the user to the organization (not the User ID). Create the membership with the `uptrace_org_user` resource and chain its `id` here, or `terraform import` an existing membership.
 
 | Field       | Type   | Required | Note                                             |
 |-------------|--------|----------|--------------------------------------------------|
@@ -339,21 +339,6 @@ Evaluates an MQL query on a schedule with a manual threshold or automatic trend-
 | min_dev_absolute | number | no       | Minimum absolute deviation from the baseline.      |
 
 Not yet exposed on either resource: `repeat_interval` (shared oneOf of `default` / `fixed` / `linear` / `exponential`). Follow-up work.
-
-## Data sources
-
-### uptrace_org_user
-
-Resolves an existing organization user to their `OrgUser` ID, so you can reference them from membership resources like `uptrace_team_user`. Membership is managed outside Terraform — the user must already be a member of the organization at plan time. Errors if no match is found.
-
-| Field   | Type   | Required | Note                                                                    |
-|---------|--------|----------|-------------------------------------------------------------------------|
-| org_id  | string | yes      | Organization to search within.                                          |
-| email   | string | yes      | Matched case-insensitively against the server value.                    |
-| id      | string | computed | OrgUser ID. Use where another resource wants an `org_user_id`.          |
-| user_id | string | computed | Underlying User ID (distinct from `id`).                                |
-| role    | string | computed | `owner`, `admin`, `member`, `viewer`, `billing_manager`, `collaborator`.|
-| name    | string | computed | Display name from the user's profile.                                   |
 
 ## Files not in git
 

@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
-// Registration declares the resources and data sources exposed by the org service.
+// Registration declares the resources exposed by the org service.
 type Registration struct{}
 
 func (Registration) Name() string {
@@ -20,7 +20,5 @@ func (Registration) Resources() []func() resource.Resource {
 }
 
 func (Registration) DataSources() []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewOrgUserDataSource,
-	}
+	return nil
 }

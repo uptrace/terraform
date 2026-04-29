@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -15,23 +16,33 @@ import (
 	"github.com/uptrace/terraform/internal/testutil"
 )
 
-// teamUserPreCheck reads and validates UPTRACE_TEST_ORG_USER_ID. Its value
-// is interpolated into the HCL config so it must run before resource.Test;
-// the helper uses only t.Skip (not t.Fatal), which is safe when TF_ACC is
-// unset. UPTRACE_ENDPOINT/TOKEN checks stay in the standard TestCase.PreCheck.
+// teamUserPreCheck reads UPTRACE_TEST_USER_EMAIL_PREFIX. Skips when unset,
+// fails fast when the value lacks an `@`. Returns the prefix verbatim;
+// callers append a per-test, per-pid tag to avoid colliding with prior runs.
+// Uses only t.Skip (not t.Fatal), which is safe when TF_ACC is unset.
 func teamUserPreCheck(t *testing.T) string {
 	t.Helper()
-	v := os.Getenv("UPTRACE_TEST_ORG_USER_ID")
+	v := os.Getenv("UPTRACE_TEST_USER_EMAIL_PREFIX")
 	if v == "" {
-		t.Skip("UPTRACE_TEST_ORG_USER_ID must be set to run uptrace_team_user acceptance tests")
+		t.Skip("UPTRACE_TEST_USER_EMAIL_PREFIX must be set to run uptrace_team_user acceptance tests")
 	}
-	if _, err := strconv.ParseUint(v, 10, 64); err != nil {
-		t.Fatalf("UPTRACE_TEST_ORG_USER_ID is not a valid uint64: %v", err)
+	if !strings.Contains(v, "@") {
+		t.Fatalf("UPTRACE_TEST_USER_EMAIL_PREFIX must contain @: %q", v)
 	}
 	return v
 }
 
-func testAccTeamUserConfig(orgName, teamName, orgUserID string) string {
+// teamUserUniqueEmail builds a `<local>+<tag>-<pid>@<domain>` email so each
+// test gets a fresh inviter target and concurrent processes don't collide.
+func teamUserUniqueEmail(prefix, tag string) string {
+	parts := strings.SplitN(prefix, "@", 2)
+	return strings.ToLower(parts[0] + "+" + tag + "-" + strconv.FormatInt(int64(os.Getpid()), 10) + "@" + parts[1])
+}
+
+// testAccTeamUserConfig mirrors examples/resources/uptrace_team_user/resource.tf:
+// org → team → user → org_user → team_user, all created inline so the test
+// covers the full chain without relying on a pre-existing OrgUser ID.
+func testAccTeamUserConfig(orgName, teamName, email string) string {
 	return fmt.Sprintf(`
 resource "uptrace_org" "test" {
   name = %q
@@ -42,12 +53,22 @@ resource "uptrace_team" "test" {
   name   = %q
 }
 
+resource "uptrace_user" "test" {
+  email = %q
+}
+
+resource "uptrace_org_user" "test" {
+  org_id  = uptrace_org.test.id
+  user_id = uptrace_user.test.id
+  role    = "admin"
+}
+
 resource "uptrace_team_user" "test" {
   org_id      = uptrace_org.test.id
   team_id     = uptrace_team.test.id
-  org_user_id = %q
+  org_user_id = uptrace_org_user.test.id
 }
-`, orgName, teamName, orgUserID)
+`, orgName, teamName, email)
 }
 
 func testAccCheckTeamUserDestroy(t *testing.T) resource.TestCheckFunc {
@@ -90,7 +111,8 @@ func testAccCheckTeamUserDestroy(t *testing.T) resource.TestCheckFunc {
 }
 
 func TestAccTeamUser_basic(t *testing.T) {
-	orgUserID := teamUserPreCheck(t)
+	prefix := teamUserPreCheck(t)
+	email := teamUserUniqueEmail(prefix, "acc-team-user")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutil.PreCheck(t) },
@@ -98,7 +120,7 @@ func TestAccTeamUser_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckTeamUserDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccTeamUserConfig("acc-tu-org", "acc-tu-team", orgUserID),
+				Config: testAccTeamUserConfig("acc-tu-org", "acc-tu-team", email),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("uptrace_team_user.test", "id"),
 					resource.TestCheckResourceAttrPair(
@@ -108,7 +130,7 @@ func TestAccTeamUser_basic(t *testing.T) {
 				),
 			},
 			{
-				Config:   testAccTeamUserConfig("acc-tu-org", "acc-tu-team", orgUserID),
+				Config:   testAccTeamUserConfig("acc-tu-org", "acc-tu-team", email),
 				PlanOnly: true,
 			},
 			{
@@ -122,9 +144,10 @@ func TestAccTeamUser_basic(t *testing.T) {
 }
 
 func TestAccTeamUser_disappearsOutOfBand(t *testing.T) {
-	orgUserID := teamUserPreCheck(t)
+	prefix := teamUserPreCheck(t)
+	email := teamUserUniqueEmail(prefix, "acc-team-user-gone")
 
-	config := testAccTeamUserConfig("acc-tu-gone-org", "acc-tu-gone-team", orgUserID)
+	config := testAccTeamUserConfig("acc-tu-gone-org", "acc-tu-gone-team", email)
 	var orgIDAttr, teamIDAttr, orgUserIDAttr string
 
 	resource.Test(t, resource.TestCase{
