@@ -187,17 +187,19 @@ func (r *OrgUserResource) Update(ctx context.Context, req resource.UpdateRequest
 		"role":        plan.Role.ValueString(),
 	})
 
-	if _, err := r.client.API.UpdateOrgUserRole(ctx, &generated.UpdateOrgUserRoleRequestOptions{
+	out, err := r.client.API.UpdateOrgUserRole(ctx, &generated.UpdateOrgUserRoleRequestOptions{
 		PathParams: &generated.UpdateOrgUserRolePath{OrgID: orgID, OrgUserID: orgUserID},
 		Body: &generated.OrgUserRoleUpdateRequest{
 			Role: generated.UserRole(plan.Role.ValueString()),
 		},
-	}); err != nil {
+	})
+	if err != nil {
 		tfutil.AddAPIError(&resp.Diagnostics, "update org_user role failed", err)
 		return
 	}
 
 	plan.ID = state.ID
+	plan.Role = types.StringValue(string(out.User.Role))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
