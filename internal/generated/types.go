@@ -150,6 +150,19 @@ func (u User) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(u))
 }
 
+// PublicUser Safe user summary for UI display.
+type PublicUser struct {
+	ID   uint64 `json:"id" validate:"required"`
+	Name string `json:"name" validate:"required"`
+
+	// Avatar URL to the user's avatar image.
+	Avatar string `json:"avatar" jsonschema:"URL to the user's avatar image." validate:"required"`
+}
+
+func (p PublicUser) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(p))
+}
+
 // Org An organization.
 type Org struct {
 	ID              uint64   `json:"id" validate:"required"`
@@ -3193,6 +3206,25 @@ type ResendInviteResponse struct {
 	Ok bool `json:"ok"`
 }
 
+// UserInviteCancelResponse Response from DELETE /orgs/{org_id}/invites/{invite_id}.
+type UserInviteCancelResponse struct {
+	// Invite A pending or resolved organization invitation.
+	Invite UserInvite `json:"invite" jsonschema:"A pending or resolved organization invitation."`
+}
+
+func (u UserInviteCancelResponse) Validate() error {
+	var errors runtime.ValidationErrors
+	if v, ok := any(u.Invite).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Invite", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
 // OrgUserProject A user's project-level permission override.
 type OrgUserProject struct {
 	OrgID     uint64 `json:"orgId" validate:"required"`
@@ -3315,22 +3347,59 @@ func (u UserInvite) Validate() error {
 	return errors
 }
 
-// UserInviteResponse Response from creating or processing an invitation. `userID` is always returned. `inviteID` is returned when an actual invite row was created; absent when the email already maps to a confirmed user. `addedToOrg: true` is returned only on the org-scoped path (POST /orgs/{org_id}/invites) when the email maps to a confirmed user and the call attached them to the org directly. Both boolean flags default to absent (treat absence as false).
+// UserInviteResponse Response from creating or processing an invitation. `user` is a public invitee summary. `invite` is a compact invite summary; `invite.status` is `sent` for pending invitations and `accepted` when the email already maps to a confirmed user. `invite.id` is the persisted invite ID for pending invites and a response-only random ID for already-confirmed users. `invite.orgId` is present for org-scoped actions; when `invite.status` is `accepted` and `invite.orgId` is present, the confirmed user was attached to that org.
 type UserInviteResponse struct {
-	UserID uint64 `json:"userID" validate:"required"`
+	// User Safe user summary for UI display.
+	User PublicUser `json:"user" jsonschema:"Safe user summary for UI display."`
 
-	// InviteID 32-character hex trace ID. Absent when no new invite row was created.
-	InviteID *string `json:"inviteID,omitempty" jsonschema:"32-character hex trace ID. Absent when no new invite row was created."`
-
-	// AlreadyConfirmed True when the email already mapped to a User with email_confirmed=true.
-	AlreadyConfirmed bool `json:"alreadyConfirmed" jsonschema:"True when the email already mapped to a User with email_confirmed=true."`
-
-	// AddedToOrg True when an already-confirmed user was attached to the org as part of this call (org-scoped path only).
-	AddedToOrg *bool `json:"addedToOrg,omitempty" jsonschema:"True when an already-confirmed user was attached to the org as part of this call (org-scoped path only)."`
+	// Invite Compact invite summary returned from create-invite endpoints.
+	Invite InviteSummary `json:"invite" jsonschema:"Compact invite summary returned from create-invite endpoints."`
 }
 
 func (u UserInviteResponse) Validate() error {
-	return runtime.ConvertValidatorError(typesValidator.Struct(u))
+	var errors runtime.ValidationErrors
+	if v, ok := any(u.User).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("User", err)
+		}
+	}
+	if v, ok := any(u.Invite).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Invite", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// InviteSummary Compact invite summary returned from create-invite endpoints.
+type InviteSummary struct {
+	// ID 32-character hex trace ID.
+	ID string `json:"id" jsonschema:"32-character hex trace ID." validate:"required"`
+
+	// Status Lifecycle status of an organization invitation.
+	Status InviteStatus `json:"status" jsonschema:"Lifecycle status of an organization invitation." validate:"required"`
+
+	// OrgID Present for org-scoped invite actions.
+	OrgID *uint64 `json:"orgId,omitempty" jsonschema:"Present for org-scoped invite actions."`
+}
+
+func (i InviteSummary) Validate() error {
+	var errors runtime.ValidationErrors
+	if err := typesValidator.Var(i.ID, "required"); err != nil {
+		errors = errors.Append("ID", err)
+	}
+	if v, ok := any(i.Status).(runtime.Validator); ok {
+		if err := v.Validate(); err != nil {
+			errors = errors.Append("Status", err)
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
 }
 
 type UserInviteListResponse struct {
@@ -3381,7 +3450,7 @@ func (u UserInviteCreateRequest) Validate() error {
 	return errors
 }
 
-// OrglessUserInviteCreateRequest Body for the top-level POST /invites (Terraform path). Only `email` is accepted; `role` and `teamIds` would be meaningless without an org.
+// OrglessUserInviteCreateRequest Body for the top-level POST /invites (Terraform path). Only `email` is accepted; `role` and `teamIds` would be meaningless without an org. The caller must have access to at least one organization with an active subscription.
 type OrglessUserInviteCreateRequest struct {
 	// Email Email address of the invitee. Required; trimmed and lowercased server-side.
 	Email string `json:"email" jsonschema:"Email address of the invitee. Required; trimmed and lowercased server-side." validate:"required"`

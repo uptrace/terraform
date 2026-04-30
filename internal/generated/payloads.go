@@ -200,7 +200,7 @@ type UpdateTeamBody = TeamUpdateRequest
 // AddTeamProjectBody Request body for adding a project to a team. A non-empty JSON body is required so the server can decode it. The `permLevel` field is accepted but currently ignored by the backend.
 type AddTeamProjectBody = TeamProjectAddRequest
 
-// CreateOrglessInviteBody Body for the top-level POST /invites (Terraform path). Only `email` is accepted; `role` and `teamIds` would be meaningless without an org.
+// CreateOrglessInviteBody Body for the top-level POST /invites (Terraform path). Only `email` is accepted; `role` and `teamIds` would be meaningless without an org. The caller must have access to at least one organization with an active subscription.
 type CreateOrglessInviteBody = OrglessUserInviteCreateRequest
 
 type UpdateProjectBody = ProjectCreateRequest
