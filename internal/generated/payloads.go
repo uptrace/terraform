@@ -124,6 +124,15 @@ func (u *UpdateMonitorBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type PauseMonitorBody struct {
+	// Duration Pause duration in nanoseconds. Minimum 1 hour (3600000000000 ns). Omit for an indefinite pause.
+	Duration *int64 `json:"duration,omitempty" jsonschema:"Pause duration in nanoseconds. Minimum 1 hour (3600000000000 ns). Omit for an indefinite pause." validate:"omitempty,gte=3600000000000"`
+}
+
+func (p PauseMonitorBody) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(p))
+}
+
 // CreateDashboardFromYamlBody YAML dashboard definition.
 type CreateDashboardFromYamlBody = string
 
@@ -174,6 +183,9 @@ type UpdateOrgBudgetBody = OrgUpdateBudgetRequest
 
 type CreateProjectBody = ProjectCreateRequest
 
+// CreateOrgUserBody Body for POST /orgs/{org_id}/users. Creates an OrgUser membership for an existing User by ID. Idempotent — re-posting the same userId updates the role.
+type CreateOrgUserBody = OrgUserCreateRequest
+
 type UpdateOrgUserRoleBody = OrgUserRoleUpdateRequest
 
 type UpdateOrgUserProjectPermBody = OrgUserProjectUpdateRequest
@@ -187,6 +199,9 @@ type UpdateTeamBody = TeamUpdateRequest
 
 // AddTeamProjectBody Request body for adding a project to a team. A non-empty JSON body is required so the server can decode it. The `permLevel` field is accepted but currently ignored by the backend.
 type AddTeamProjectBody = TeamProjectAddRequest
+
+// CreateOrglessInviteBody Body for the top-level POST /invites (Terraform path). Only `email` is accepted; `role` and `teamIds` would be meaningless without an org. The caller must have access to at least one organization with an active subscription.
+type CreateOrglessInviteBody = OrglessUserInviteCreateRequest
 
 type UpdateProjectBody = ProjectCreateRequest
 

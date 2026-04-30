@@ -158,6 +158,38 @@ Manages an ingest token for an Uptrace project.
 
 Import with `<project_id>:<token_id>`.
 
+### uptrace_user / uptrace_org_user
+
+The two resources together let you declare org membership end-to-end from Terraform.
+
+`uptrace_user` issues an orgless invite that pre-creates a global User row and returns its numeric ID. `uptrace_org_user` then attaches that user to a specific organization with a role.
+
+#### uptrace_user
+
+Manages a global Uptrace user. Creation issues an orgless invite that pre-creates the User row server-side and returns its ID; pair with `uptrace_org_user` to grant org membership.
+
+Any authenticated token can create users. The backend sends an account-invitation email to the recipient with a link to confirm the email and set a password. If the email already maps to a confirmed user, no invite is created and the existing user ID is returned — `apply` adopts existing users by email, so importing is unnecessary and not supported.
+
+| Field | Type   | Required | Note                                                                       |
+|-------|--------|----------|----------------------------------------------------------------------------|
+| email | string | yes      | Must be lowercase and trimmed. Forces replacement on change.               |
+| id    | string | computed | Numeric user ID returned by the backend.                                   |
+
+Email is immutable; changing it forces recreation. Delete removes the resource from Terraform state only — the underlying User row and any pending invite remain on the server, since the API has no global user-delete endpoint. Drift detection is not implemented: out-of-band changes to the underlying user are not reflected in plan output.
+
+#### uptrace_org_user
+
+Adds an existing user to an organization with a role. Idempotent — creating twice updates the role server-side. Pair with `uptrace_user` to manage the underlying user.
+
+| Field   | Type   | Required | Note                                                                                   |
+|---------|--------|----------|----------------------------------------------------------------------------------------|
+| org_id  | string | yes      | Forces replacement on change.                                                          |
+| user_id | string | yes      | Forces replacement on change.                                                          |
+| role    | string | yes      | One of `owner`, `admin`, `member`, `viewer`, `billing_manager`, `collaborator`. Updatable. |
+| id      | string | computed | OrgUser ID. Use where another resource wants an `org_user_id` (e.g. `uptrace_team_user`). |
+
+Import with `<org_id>:<org_user_id>`.
+
 ### uptrace_team / uptrace_team_project / uptrace_team_user
 
 Teams group users for project-scoped access control within an organization. Teams are a Premium feature; the backend returns `403` for unlicensed organizations.
@@ -194,7 +226,7 @@ Import with `<org_id>:<team_id>:<project_id>`.
 
 Adds an organization user to a team. Idempotent. There is no update — changing any field forces replacement.
 
-`org_user_id` is the ID of the OrgUser record linking the user to the organization (not the User ID). The API does not expose a way to create OrgUsers; invite users through the Uptrace UI first, then reference the resulting `org_user_id` here.
+`org_user_id` is the ID of the OrgUser record linking the user to the organization (not the User ID). Create the membership with the `uptrace_org_user` resource and chain its `id` here, or `terraform import` an existing membership.
 
 | Field       | Type   | Required | Note                                             |
 |-------------|--------|----------|--------------------------------------------------|
@@ -305,21 +337,6 @@ Evaluates an MQL query on a schedule with a manual threshold or automatic trend-
 | min_dev_absolute | number | no       | Minimum absolute deviation from the baseline.      |
 
 Not yet exposed on either resource: `repeat_interval` (shared oneOf of `default` / `fixed` / `linear` / `exponential`). Follow-up work.
-
-## Data sources
-
-### uptrace_org_user
-
-Resolves an existing organization user to their `OrgUser` ID, so you can reference them from membership resources like `uptrace_team_user`. Membership is managed outside Terraform — the user must already be a member of the organization at plan time. Errors if no match is found.
-
-| Field   | Type   | Required | Note                                                                    |
-|---------|--------|----------|-------------------------------------------------------------------------|
-| org_id  | string | yes      | Organization to search within.                                          |
-| email   | string | yes      | Matched case-insensitively against the server value.                    |
-| id      | string | computed | OrgUser ID. Use where another resource wants an `org_user_id`.          |
-| user_id | string | computed | Underlying User ID (distinct from `id`).                                |
-| role    | string | computed | `owner`, `admin`, `member`, `viewer`, `billing_manager`, `collaborator`.|
-| name    | string | computed | Display name from the user's profile.                                   |
 
 ## Files not in git
 

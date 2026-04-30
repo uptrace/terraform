@@ -156,6 +156,30 @@ func (d DeleteMonitorPath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(d))
 }
 
+type ActivateMonitorPath struct {
+	// ProjectID Uptrace project ID.
+	ProjectID ProjectID `json:"project_id" jsonschema:"Uptrace project ID." validate:"required"`
+
+	// MonitorID Monitor ID.
+	MonitorID MonitorID `json:"monitor_id" jsonschema:"Monitor ID." validate:"required"`
+}
+
+func (a ActivateMonitorPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(a))
+}
+
+type PauseMonitorPath struct {
+	// ProjectID Uptrace project ID.
+	ProjectID ProjectID `json:"project_id" jsonschema:"Uptrace project ID." validate:"required"`
+
+	// MonitorID Monitor ID.
+	MonitorID MonitorID `json:"monitor_id" jsonschema:"Monitor ID." validate:"required"`
+}
+
+func (p PauseMonitorPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(p))
+}
+
 type ListDashboardsPath struct {
 	// ProjectID Uptrace project ID.
 	ProjectID ProjectID `json:"project_id" jsonschema:"Uptrace project ID." validate:"required"`
@@ -564,6 +588,15 @@ func (l ListOrgUsersPath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(l))
 }
 
+type CreateOrgUserPath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+}
+
+func (c CreateOrgUserPath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(c))
+}
+
 type GetOrgUserPath struct {
 	// OrgID Organization ID.
 	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
@@ -643,6 +676,18 @@ type CancelOrgInvitePath struct {
 
 func (c CancelOrgInvitePath) Validate() error {
 	return runtime.ConvertValidatorError(typesValidator.Struct(c))
+}
+
+type ResendOrgInvitePath struct {
+	// OrgID Organization ID.
+	OrgID OrgID `json:"org_id" jsonschema:"Organization ID." validate:"required"`
+
+	// InviteID Invitation ID (32-character hex string).
+	InviteID InviteID `json:"invite_id" jsonschema:"Invitation ID (32-character hex string)." validate:"required"`
+}
+
+func (r ResendOrgInvitePath) Validate() error {
+	return runtime.ConvertValidatorError(typesValidator.Struct(r))
 }
 
 type ListTeamsPath struct {
