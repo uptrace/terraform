@@ -20,6 +20,10 @@ generate:
 	$(GO) tool oapi-codegen \
 		-config oapi-codegen.yaml openapi/openapi.yaml
 
+.PHONY: docs
+docs:
+	tfplugindocs generate --provider-name uptrace
+
 .PHONY: build
 build:
 	$(GO) build -ldflags "$(LDFLAGS)" -o $(BINARY) .

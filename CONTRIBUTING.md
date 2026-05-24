@@ -70,6 +70,16 @@ Without `TF_ACC=1`, acceptance tests are automatically skipped.
   `TestAcc` prefix and `resource.TestCase` with `testutil.ProtoV6ProviderFactories`. Always include
   `PreCheck`, `CheckDestroy`, and an import step.
 
+## Generating documentation
+
+Registry documentation in `docs/` is generated from schema descriptions and the `examples/` directory:
+
+```bash
+make docs
+```
+
+Re-run this after changing resource schemas, descriptions, or example files, and commit the result.
+
 ## Files not in git
 
 | File                         | What it is             | How to get it                              |

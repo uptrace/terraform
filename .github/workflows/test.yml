@@ -18,8 +18,20 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install tfplugindocs
+        run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.25.0
+
       - name: Go mod tidy check
         run: go mod tidy -diff
+
+      - name: Generated docs check
+        run: |
+          make docs
+          if [ -n "$(git status --porcelain -- docs)" ]; then
+            git status --short -- docs
+            git diff -- docs
+            exit 1
+          fi
 
       - name: Format check
         run: make fmtcheck

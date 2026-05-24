@@ -38,6 +38,7 @@ func (p *UptraceProvider) Metadata(_ context.Context, _ tfprovider.MetadataReque
 
 func (p *UptraceProvider) Schema(_ context.Context, _ tfprovider.SchemaRequest, resp *tfprovider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Manage Uptrace organizations, projects, monitors, notification channels, teams, users, and project tokens.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -77,7 +78,7 @@ func (p *UptraceProvider) Configure(ctx context.Context, req tfprovider.Configur
 		return
 	}
 
-	c, err := client.New(endpoint, token)
+	c, err := client.New(endpoint, token, p.version)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create API client", err.Error())
 		return

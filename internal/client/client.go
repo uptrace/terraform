@@ -27,18 +27,19 @@ type Client struct {
 }
 
 // New creates a client with retryable HTTP transport and bearer token auth.
-func New(endpoint, token string) (*Client, error) {
+func New(endpoint, token, providerVersion string) (*Client, error) {
 	rc := newRetryableHTTPClient()
 
-	bearerAuth := func(_ context.Context, req *http.Request) error {
+	setHeaders := func(_ context.Context, req *http.Request) error {
 		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("User-Agent", "terraform-provider-uptrace/"+providerVersion)
 		return nil
 	}
 
 	apiClient, err := runtime.NewAPIClient(
 		endpoint,
 		runtime.WithHTTPClient(&httpDoerAdapter{client: rc.StandardClient()}),
-		runtime.WithRequestEditorFn(bearerAuth),
+		runtime.WithRequestEditorFn(setHeaders),
 	)
 	if err != nil {
 		return nil, err

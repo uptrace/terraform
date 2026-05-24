@@ -39,28 +39,34 @@ add the following secrets:
 
 ## Creating a release
 
-1. Make sure all changes are merged to the main branch and CI is green.
+1. Re-generate registry documentation and commit any changes:
 
-2. Choose a version following [Semantic Versioning](https://semver.org/):
+   ```bash
+   make docs
+   ```
+
+2. Make sure all changes are merged to the main branch and CI is green.
+
+3. Choose a version following [Semantic Versioning](https://semver.org/):
    - **patch** (v0.1.1) — bug fixes
    - **minor** (v0.2.0) — new resources or data sources, new attributes
    - **major** (v1.0.0) — breaking changes to existing resources or attributes
 
-3. Create and push an annotated tag:
+4. Create and push an annotated tag:
 
    ```bash
    git tag -a v0.1.0 -m "v0.1.0"
    git push origin v0.1.0
    ```
 
-4. The **Release** GitHub Actions workflow triggers automatically. It builds
+5. The **Release** GitHub Actions workflow triggers automatically. It builds
    binaries for all supported platforms, signs the checksum file, and creates a
    **draft** GitHub release.
 
-5. Review the draft release on the GitHub releases page. Edit the release notes
+6. Review the draft release on the GitHub releases page. Edit the release notes
    if needed, then publish it.
 
-6. The Terraform Registry detects the published release via webhook and makes
+7. The Terraform Registry detects the published release via webhook and makes
    the new version available.
 
 ## Verifying

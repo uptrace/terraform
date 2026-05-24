@@ -65,6 +65,7 @@ func TestAccClient(t *testing.T) *client.Client {
 	c, err := client.New(
 		os.Getenv("UPTRACE_ENDPOINT"),
 		os.Getenv("UPTRACE_TOKEN"),
+		"test",
 	)
 	if err != nil {
 		t.Fatalf("creating API client: %v", err)
