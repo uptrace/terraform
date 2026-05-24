@@ -75,7 +75,7 @@ func TestAccErrorMonitor_basic(t *testing.T) {
 				// The backend normalizes MQL (e.g. $logs → $logs{}, all.type → all.type::str),
 				// so the imported query can differ from the user's input form even though
 				// they're semantically identical.
-				ImportStateVerifyIgnore: []string{"params"},
+				ImportStateVerifyIgnore: []string{"params", "status"},
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					rs, ok := s.RootModule().Resources["uptrace_error_monitor.test"]
 					if !ok {

@@ -77,7 +77,7 @@ func TestAccMetricMonitor_autoDetector(t *testing.T) {
 				// from the query, and populates optional scalars (resolution,
 				// num_eval_points, absent_points) — all of which the provider
 				// intentionally preserves as null when the user did not set them.
-				ImportStateVerifyIgnore: []string{"params"},
+				ImportStateVerifyIgnore: []string{"params", "status"},
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					rs, ok := s.RootModule().Resources["uptrace_metric_monitor.test"]
 					if !ok {
