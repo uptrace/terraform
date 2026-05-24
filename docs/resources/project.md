@@ -37,7 +37,6 @@ resource "uptrace_project" "example" {
 ### Optional
 
 - `count_distinct` (Boolean) Enable count distinct aggregations.
-- `display_log_severity` (Boolean) Display log severity column.
 - `event_retention` (String) Event retention duration. Omit to use the server default. Duration string; stdlib units (ns, us, ms, s, m, h) plus d (day) and w (week).
 - `event_time_range` (String) Default event query time range. Omit to use the server default. Duration string; stdlib units (ns, us, ms, s, m, h) plus d (day) and w (week).
 - `group_by_env` (Boolean) Group spans by deployment environment.

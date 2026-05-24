@@ -77,7 +77,6 @@ Manages a project scoped under an organization.
 | group_by_env           | bool   | no       | Group spans by environment. Updatable.                           |
 | group_funcs_by_service | bool   | no       | Group functions by service. Updatable.                           |
 | semconv_version        | string | no       | One of `none`, `v1.25.0`, `v1.33.0`.                            |
-| display_log_severity   | bool   | no       | Updatable.                                                       |
 | count_distinct         | bool   | no       | Updatable.                                                       |
 | span_time_range        | string | no       | Default query time range for spans (e.g. `"24h"`).              |
 | log_time_range         | string | no       | Default query time range for logs.                               |

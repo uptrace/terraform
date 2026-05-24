@@ -136,9 +136,6 @@ type User struct {
 	// OtpEnabled Whether two-factor authentication is enabled.
 	OtpEnabled *bool `json:"otpEnabled,omitempty" jsonschema:"Whether two-factor authentication is enabled."`
 
-	// LastReadAt Unix timestamp in nanoseconds of last read.
-	LastReadAt *float32 `json:"lastReadAt,omitempty" jsonschema:"Unix timestamp in nanoseconds of last read."`
-
 	// TimeZone IANA time zone (e.g., America/New_York).
 	TimeZone *string `json:"timeZone,omitempty" jsonschema:"IANA time zone (e.g., America/New_York)."`
 
@@ -242,7 +239,6 @@ type Project struct {
 	GroupByEnv          *bool                  `json:"groupByEnv,omitempty"`
 	GroupFuncsByService *bool                  `json:"groupFuncsByService,omitempty"`
 	SemconvVersion      *ProjectSemconvVersion `json:"semconvVersion,omitempty"`
-	DisplayLogSeverity  *bool                  `json:"displayLogSeverity,omitempty"`
 	CountDistinct       *bool                  `json:"countDistinct,omitempty"`
 	SpanQuery           *string                `json:"spanQuery,omitempty"`
 	SpanColumns         []string               `json:"spanColumns,omitempty"`
@@ -337,7 +333,6 @@ type ProjectCreateRequest struct {
 	GroupByEnv          *bool                               `json:"groupByEnv,omitempty"`
 	GroupFuncsByService *bool                               `json:"groupFuncsByService,omitempty"`
 	SemconvVersion      *ProjectCreateRequestSemconvVersion `json:"semconvVersion,omitempty"`
-	DisplayLogSeverity  *bool                               `json:"displayLogSeverity,omitempty"`
 	CountDistinct       *bool                               `json:"countDistinct,omitempty"`
 
 	// SpanTimeRange Duration in milliseconds (e.g., 86400000 for 24h).

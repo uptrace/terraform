@@ -65,7 +65,6 @@ func TestProjectToModel_fullPayload(t *testing.T) {
 		GroupByEnv:          runtime.Ptr(true),
 		GroupFuncsByService: runtime.Ptr(false),
 		SemconvVersion:      &semconv,
-		DisplayLogSeverity:  runtime.Ptr(true),
 		CountDistinct:       runtime.Ptr(false),
 	}
 	var m projectModel
@@ -78,7 +77,6 @@ func TestProjectToModel_fullPayload(t *testing.T) {
 	require.True(t, m.GroupByEnv.ValueBool())
 	require.False(t, m.GroupFuncsByService.ValueBool())
 	require.Equal(t, "v1.33.0", m.SemconvVersion.ValueString())
-	require.True(t, m.DisplayLogSeverity.ValueBool())
 	require.False(t, m.CountDistinct.ValueBool())
 }
 
@@ -146,7 +144,6 @@ func TestProjectRequestBody_unsetFieldsAreOmitted(t *testing.T) {
 	require.True(t, *body.GroupByEnv)
 	require.Nil(t, body.GroupFuncsByService)
 	require.Nil(t, body.SemconvVersion)
-	require.Nil(t, body.DisplayLogSeverity)
 	require.Nil(t, body.SpanRetention)
 	require.Nil(t, body.MetricRetention)
 }

@@ -40,9 +40,8 @@ type projectModel struct {
 	GroupByEnv          types.Bool `tfsdk:"group_by_env"`
 	GroupFuncsByService types.Bool `tfsdk:"group_funcs_by_service"`
 
-	SemconvVersion     types.String `tfsdk:"semconv_version"`
-	DisplayLogSeverity types.Bool   `tfsdk:"display_log_severity"`
-	CountDistinct      types.Bool   `tfsdk:"count_distinct"`
+	SemconvVersion types.String `tfsdk:"semconv_version"`
+	CountDistinct  types.Bool   `tfsdk:"count_distinct"`
 
 	SpanTimeRange  types.String `tfsdk:"span_time_range"`
 	LogTimeRange   types.String `tfsdk:"log_time_range"`
@@ -119,7 +118,6 @@ func (r *ProjectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"group_by_env":           optionalComputedBool("Group spans by deployment environment."),
 			"group_funcs_by_service": optionalComputedBool("Group functions by service name."),
 			"semconv_version":        semconvVersionAttr,
-			"display_log_severity":   optionalComputedBool("Display log severity column."),
 			"count_distinct":         optionalComputedBool("Enable count distinct aggregations."),
 
 			"span_time_range":  optionalDuration("Default span query time range. Omit to use the server default."),
@@ -299,10 +297,6 @@ func projectRequestBody(m *projectModel) (*generated.ProjectCreateRequest, error
 		v := generated.ProjectCreateRequestSemconvVersion(m.SemconvVersion.ValueString())
 		body.SemconvVersion = &v
 	}
-	if !m.DisplayLogSeverity.IsNull() && !m.DisplayLogSeverity.IsUnknown() {
-		v := m.DisplayLogSeverity.ValueBool()
-		body.DisplayLogSeverity = &v
-	}
 	if !m.CountDistinct.IsNull() && !m.CountDistinct.IsUnknown() {
 		v := m.CountDistinct.ValueBool()
 		body.CountDistinct = &v
@@ -400,7 +394,6 @@ func projectToModel(p *generated.Project, m *projectModel) {
 	} else {
 		m.SemconvVersion = types.StringNull()
 	}
-	m.DisplayLogSeverity = boolFromPtr(p.DisplayLogSeverity)
 	m.CountDistinct = boolFromPtr(p.CountDistinct)
 
 	// Intentionally do NOT populate SpanTimeRange/.../MetricRetention from the
