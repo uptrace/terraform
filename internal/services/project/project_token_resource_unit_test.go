@@ -83,6 +83,7 @@ func TestProjectTokenToModel_nilOptionalFields(t *testing.T) {
 		ID:        42,
 		ProjectID: 7,
 		Token:     "secret123",
+		Name:      runtime.Ptr("test"),
 	}
 	var m projectTokenModel
 
@@ -90,23 +91,8 @@ func TestProjectTokenToModel_nilOptionalFields(t *testing.T) {
 
 	require.Equal(t, types.StringValue("42"), m.ID)
 	require.Equal(t, types.StringValue("secret123"), m.Token)
-	require.True(t, m.Name.IsNull())
+	require.Equal(t, types.StringValue("test"), m.Name)
 	require.True(t, m.DSN.IsNull())
-}
-
-func TestProjectTokenToModel_emptyNameTreatedAsNull(t *testing.T) {
-	token := &generated.ProjectToken{
-		ID:        42,
-		ProjectID: 7,
-		Token:     "secret123",
-		Name:      runtime.Ptr(""),
-	}
-	var m projectTokenModel
-
-	projectTokenToModel(token, &m)
-
-	require.True(t, m.Name.IsNull(),
-		"empty string name from API must map to null to avoid drift when user omits name")
 }
 
 func TestProjectTokenImportState_rejectsInvalidTokenID(t *testing.T) {

@@ -33,11 +33,8 @@ resource "uptrace_project_token" "example" {
 
 ### Required
 
+- `name` (String) Human-readable token name.
 - `project_id` (String) Project ID this token belongs to. Changing this forces recreation.
-
-### Optional
-
-- `name` (String) Human-readable token name. Removing this attribute clears the name.
 
 ### Read-Only
 

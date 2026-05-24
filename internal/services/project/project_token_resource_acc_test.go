@@ -14,24 +14,7 @@ import (
 	"github.com/uptrace/terraform/internal/testutil"
 )
 
-func testAccProjectTokenConfig(orgName, projectName string) string {
-	return fmt.Sprintf(`
-resource "uptrace_org" "test" {
-  name = %q
-}
-
-resource "uptrace_project" "test" {
-  org_id = uptrace_org.test.id
-  name   = %q
-}
-
-resource "uptrace_project_token" "test" {
-  project_id = uptrace_project.test.id
-}
-`, orgName, projectName)
-}
-
-func testAccProjectTokenConfigWithName(orgName, projectName, tokenName string) string {
+func testAccProjectTokenConfig(orgName, projectName, tokenName string) string {
 	return fmt.Sprintf(`
 resource "uptrace_org" "test" {
   name = %q
@@ -88,16 +71,17 @@ func TestAccProjectToken_basic(t *testing.T) {
 		CheckDestroy:             testAccCheckProjectTokenDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectTokenConfig("acc-token-org", "acc-token-project"),
+				Config: testAccProjectTokenConfig("acc-token-org", "acc-token-project", "initial"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("uptrace_project_token.test", "id"),
 					resource.TestCheckResourceAttrSet("uptrace_project_token.test", "project_id"),
+					resource.TestCheckResourceAttr("uptrace_project_token.test", "name", "initial"),
 					resource.TestCheckResourceAttrSet("uptrace_project_token.test", "token"),
 					resource.TestCheckResourceAttrSet("uptrace_project_token.test", "dsn"),
 				),
 			},
 			{
-				Config: testAccProjectTokenConfigWithName("acc-token-org", "acc-token-project", "renamed"),
+				Config: testAccProjectTokenConfig("acc-token-org", "acc-token-project", "renamed"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("uptrace_project_token.test", "name", "renamed"),
 					resource.TestCheckResourceAttrSet("uptrace_project_token.test", "token"),
@@ -126,7 +110,7 @@ func TestAccProjectToken_withName(t *testing.T) {
 		CheckDestroy:             testAccCheckProjectTokenDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectTokenConfigWithName("acc-token-name-org", "acc-token-name-project", "ci-ingest"),
+				Config: testAccProjectTokenConfig("acc-token-name-org", "acc-token-name-project", "ci-ingest"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("uptrace_project_token.test", "name", "ci-ingest"),
 					resource.TestCheckResourceAttrSet("uptrace_project_token.test", "token"),
@@ -134,18 +118,18 @@ func TestAccProjectToken_withName(t *testing.T) {
 				),
 			},
 			{
-				Config:   testAccProjectTokenConfigWithName("acc-token-name-org", "acc-token-name-project", "ci-ingest"),
+				Config:   testAccProjectTokenConfig("acc-token-name-org", "acc-token-name-project", "ci-ingest"),
 				PlanOnly: true,
 			},
 			{
-				Config: testAccProjectTokenConfig("acc-token-name-org", "acc-token-name-project"),
+				Config: testAccProjectTokenConfig("acc-token-name-org", "acc-token-name-project", "renamed-ingest"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("uptrace_project_token.test", "name"),
+					resource.TestCheckResourceAttr("uptrace_project_token.test", "name", "renamed-ingest"),
 					resource.TestCheckResourceAttrSet("uptrace_project_token.test", "token"),
 				),
 			},
 			{
-				Config:   testAccProjectTokenConfig("acc-token-name-org", "acc-token-name-project"),
+				Config:   testAccProjectTokenConfig("acc-token-name-org", "acc-token-name-project", "renamed-ingest"),
 				PlanOnly: true,
 			},
 		},
@@ -153,7 +137,7 @@ func TestAccProjectToken_withName(t *testing.T) {
 }
 
 func TestAccProjectToken_disappearsOutOfBand(t *testing.T) {
-	config := testAccProjectTokenConfig("acc-disappear-token-org", "acc-disappear-token-project")
+	config := testAccProjectTokenConfig("acc-disappear-token-org", "acc-disappear-token-project", "disappear-test")
 	var tokenID, projectID string
 
 	resource.Test(t, resource.TestCase{

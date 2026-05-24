@@ -60,8 +60,8 @@ func (r *ProjectTokenResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"name": schema.StringAttribute{
-				Optional:    true,
-				Description: "Human-readable token name. Removing this attribute clears the name.",
+				Required:    true,
+				Description: "Human-readable token name.",
 			},
 			"token": schema.StringAttribute{
 				Computed:    true,
@@ -105,10 +105,9 @@ func (r *ProjectTokenResource) Create(ctx context.Context, req resource.CreateRe
 		"project_id": plan.ProjectID.ValueString(),
 	})
 
-	body := &generated.ProjectTokenCreateRequest{}
-	if !plan.Name.IsNull() && !plan.Name.IsUnknown() {
-		name := plan.Name.ValueString()
-		body.Name = &name
+	name := plan.Name.ValueString()
+	body := &generated.ProjectTokenCreateRequest{
+		Name: &name,
 	}
 
 	out, err := r.client.API.CreateProjectToken(ctx, &generated.CreateProjectTokenRequestOptions{
@@ -253,10 +252,8 @@ func projectTokenToModel(t *generated.ProjectToken, m *projectTokenModel) {
 	m.ID = types.StringValue(strconv.FormatUint(t.ID, 10))
 	m.Token = types.StringValue(t.Token)
 
-	if t.Name != nil && *t.Name != "" {
+	if t.Name != nil {
 		m.Name = types.StringValue(*t.Name)
-	} else {
-		m.Name = types.StringNull()
 	}
 
 	if t.Dsn != nil {
