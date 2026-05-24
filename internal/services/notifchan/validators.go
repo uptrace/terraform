@@ -46,10 +46,14 @@ type nullable interface {
 	IsUnknown() bool
 }
 
+func fieldIsSet(v nullable) bool {
+	return !v.IsNull() && !v.IsUnknown()
+}
+
 // forbidField emits a diagnostic when an attribute that must not be set
 // under the current configuration happens to be set.
 func forbidField(v nullable, p path.Path, reason string, diags *diag.Diagnostics) {
-	if !v.IsNull() && !v.IsUnknown() {
+	if fieldIsSet(v) {
 		diags.AddAttributeError(
 			p,
 			"unexpected attribute",

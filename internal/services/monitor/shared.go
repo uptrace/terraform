@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"regexp"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -20,6 +21,7 @@ import (
 var (
 	trendAggFuncs      = []string{"sum", "avg", "median", "last"}
 	trendSensitivities = []string{"low", "medium", "high"}
+	metricAliasRegexp  = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*$`)
 )
 
 const (
@@ -114,7 +116,10 @@ func monitorMetricsAttribute() schema.Attribute {
 				},
 				"alias": schema.StringAttribute{
 					Optional:    true,
-					Description: "Alias used in the query expression.",
+					Description: "Alias used in the query expression. Must start with $ followed by an identifier.",
+					Validators: []validator.String{
+						stringvalidator.RegexMatches(metricAliasRegexp, "must start with $ followed by an identifier"),
+					},
 				},
 			},
 		},

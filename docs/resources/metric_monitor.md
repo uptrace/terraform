@@ -156,7 +156,7 @@ Required:
 
 Optional:
 
-- `alias` (String) Alias used in the query expression.
+- `alias` (String) Alias used in the query expression. Must start with $ followed by an identifier.
 
 
 <a id="nestedatt--params--column"></a>

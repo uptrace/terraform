@@ -259,14 +259,14 @@ Evaluates an MQL query on a schedule with a manual threshold or automatic trend-
 
 | Field   | Type            | Required | Description                                                    |
 |---------|-----------------|----------|----------------------------------------------------------------|
-| metrics | list of objects | yes      | `{ name = "...", alias = "$..." }`. Aliases must start with `$`. |
+| metrics | list of objects | yes      | `{ name = "...", alias = "$..." }`. Aliases must start with `$` followed by an identifier. |
 | query   | string          | yes      | MQL query expression.                                          |
 
 **`params` block -- metric monitor:**
 
 | Field           | Type            | Required | Description                                                    |
 |-----------------|-----------------|----------|----------------------------------------------------------------|
-| metrics         | list of objects | yes      | `{ name = "...", alias = "$..." }`.                            |
+| metrics         | list of objects | yes      | `{ name = "...", alias = "$..." }`. Aliases must start with `$` followed by an identifier. |
 | query           | string          | yes      | MQL query expression.                                          |
 | column          | object          | no       | `{ name = "...", unit = "milliseconds" }`.                     |
 | resolution      | number          | no       | Evaluation resolution in milliseconds.                         |

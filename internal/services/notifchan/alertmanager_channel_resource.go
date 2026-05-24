@@ -107,23 +107,37 @@ func (r *AlertmanagerChannelResource) ValidateConfig(ctx context.Context, req re
 		return
 	}
 	validateMatchAllRule(cfg.MatchAll, cfg.MonitorIDs, &resp.Diagnostics)
+	runAlertmanagerAuthValidators(&cfg, &resp.Diagnostics)
+}
 
-	if cfg.AuthMethod.IsUnknown() || cfg.AuthMethod.IsNull() {
+func runAlertmanagerAuthValidators(cfg *alertmanagerChannelModel, diags *diag.Diagnostics) {
+	if cfg.AuthMethod.IsUnknown() {
 		return
 	}
+	if cfg.AuthMethod.IsNull() {
+		if fieldIsSet(cfg.Username) || fieldIsSet(cfg.Password) || fieldIsSet(cfg.Token) {
+			diags.AddAttributeError(
+				path.Root("auth_method"),
+				"auth_method is required",
+				"auth_method must be set when username, password, or token is set.",
+			)
+		}
+		return
+	}
+
 	switch cfg.AuthMethod.ValueString() {
 	case "basic_auth":
-		requireField(cfg.Username, path.Root("username"), `auth_method is "basic_auth"`, &resp.Diagnostics)
-		requireField(cfg.Password, path.Root("password"), `auth_method is "basic_auth"`, &resp.Diagnostics)
-		forbidField(cfg.Token, path.Root("token"), `auth_method is "basic_auth"`, &resp.Diagnostics)
+		requireField(cfg.Username, path.Root("username"), `auth_method is "basic_auth"`, diags)
+		requireField(cfg.Password, path.Root("password"), `auth_method is "basic_auth"`, diags)
+		forbidField(cfg.Token, path.Root("token"), `auth_method is "basic_auth"`, diags)
 	case "bearer":
-		requireField(cfg.Token, path.Root("token"), `auth_method is "bearer"`, &resp.Diagnostics)
-		forbidField(cfg.Username, path.Root("username"), `auth_method is "bearer"`, &resp.Diagnostics)
-		forbidField(cfg.Password, path.Root("password"), `auth_method is "bearer"`, &resp.Diagnostics)
+		requireField(cfg.Token, path.Root("token"), `auth_method is "bearer"`, diags)
+		forbidField(cfg.Username, path.Root("username"), `auth_method is "bearer"`, diags)
+		forbidField(cfg.Password, path.Root("password"), `auth_method is "bearer"`, diags)
 	case "none":
-		forbidField(cfg.Username, path.Root("username"), `auth_method is "none"`, &resp.Diagnostics)
-		forbidField(cfg.Password, path.Root("password"), `auth_method is "none"`, &resp.Diagnostics)
-		forbidField(cfg.Token, path.Root("token"), `auth_method is "none"`, &resp.Diagnostics)
+		forbidField(cfg.Username, path.Root("username"), `auth_method is "none"`, diags)
+		forbidField(cfg.Password, path.Root("password"), `auth_method is "none"`, diags)
+		forbidField(cfg.Token, path.Root("token"), `auth_method is "none"`, diags)
 	}
 }
 

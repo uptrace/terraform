@@ -3,9 +3,11 @@ package notifchan
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/uptrace/terraform/internal/client"
@@ -72,6 +74,9 @@ func (r *PushoverChannelResource) Schema(_ context.Context, _ resource.SchemaReq
 	attrs["priority"] = schema.Int64Attribute{
 		Optional:    true,
 		Description: "Priority from -2 (lowest) to 2 (emergency).",
+		Validators: []validator.Int64{
+			int64validator.Between(-2, 2),
+		},
 	}
 	attrs["sound"] = schema.StringAttribute{
 		Optional:    true,
