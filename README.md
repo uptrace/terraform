@@ -9,6 +9,17 @@ notification channels with Terraform.
 
 ## Quick start
 
+A complete, ready-to-run example lives in [`examples/quickstart/`](examples/quickstart/). To try it:
+
+```bash
+cd examples/quickstart
+terraform init
+terraform plan -var="token=YOUR_API_TOKEN"
+terraform apply -var="token=YOUR_API_TOKEN"
+```
+
+Or inline:
+
 ```hcl
 terraform {
   required_providers {
