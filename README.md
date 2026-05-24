@@ -1,35 +1,13 @@
-# terraform-provider-uptrace
+# Terraform Provider for Uptrace
 
-Minimal Terraform provider for managing Uptrace resources.
+Manage [Uptrace](https://uptrace.dev) organizations, projects, users, teams, monitors, and
+notification channels with Terraform.
 
-## Build
+## Requirements
 
-```bash
-go build -o terraform-provider-uptrace .
-```
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.0
 
-## Setup
-
-Create a dev override file so Terraform uses the local binary:
-
-```bash
-cat > .terraformrc << 'EOF'
-provider_installation {
-  dev_overrides {
-    "uptrace/uptrace" = "/path/to/terraform-provider-uptrace"
-  }
-  direct {}
-}
-EOF
-```
-
-Export it:
-
-```bash
-export TF_CLI_CONFIG_FILE=/path/to/terraform-provider-uptrace/.terraformrc
-```
-
-## Usage
+## Quick start
 
 ```hcl
 terraform {
@@ -41,312 +19,281 @@ terraform {
 }
 
 provider "uptrace" {
-  endpoint = "http://localhost:14318"
-  token    = "user1_secret"
+  endpoint = "https://api.uptrace.dev"
+  token    = var.uptrace_token
 }
 
-resource "uptrace_org" "org1" {
-  name   = "Org1"
-  budget = 100
+resource "uptrace_org" "main" {
+  name = "My Organization"
+}
+
+resource "uptrace_project" "api" {
+  org_id         = uptrace_org.main.id
+  name           = "api"
+  span_retention = "30d"
+}
+
+resource "uptrace_project_token" "api" {
+  project_id = uptrace_project.api.id
+  name       = "default"
 }
 ```
 
-Provider config can also be set via environment variables:
-
-- `UPTRACE_ENDPOINT`
-- `UPTRACE_TOKEN`
-
-## Testing
-
-The project has two layers of tests:
-
-### Unit tests
-
-Unit tests run without any external dependencies and are always safe to run:
-
 ```bash
-make test
+terraform init
+terraform plan
+terraform apply
 ```
 
-These cover pure mapping and request-building helpers plus import and ID-validation paths, and run in CI on every push and pull request.
+## Provider configuration
 
-### Acceptance tests
+| Argument   | Environment variable | Description              |
+|------------|----------------------|--------------------------|
+| `endpoint` | `UPTRACE_ENDPOINT`   | Uptrace API endpoint URL |
+| `token`    | `UPTRACE_TOKEN`      | API authentication token |
 
-Acceptance tests exercise the full Terraform lifecycle (plan, apply, import,
-destroy) against a real Uptrace API. They follow the
-[HashiCorp acceptance test conventions](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests)
-and are gated behind the `TF_ACC` environment variable.
-
-1. Copy the credentials template and fill it in:
-
-```bash
-cp .env.example .env
-```
-
-2. Run acceptance tests:
-
-```bash
-make testacc
-```
-
-Without `TF_ACC=1`, acceptance tests are automatically skipped.
-
-### Writing tests
-
-- **Unit tests** go in `*_unit_test.go` files with `package <name>` (internal).
-  Use these for pure functions that don't need a running API.
-- **Acceptance tests** go in `*_acc_test.go` files with `package <name>_test` (external).
-  Use the `TestAcc` prefix and `resource.TestCase` with `testutil.ProtoV6ProviderFactories`.
-  Always include `PreCheck`, `CheckDestroy`, and an import step.
-
-## Commands
-
-```bash
-terraform plan      # preview changes
-terraform apply     # create/update resources
-terraform destroy   # delete resources
-terraform state list   # list managed resources
-```
+Arguments take precedence over environment variables.
 
 ## Resources
 
 ### uptrace_org
 
-Manages an Uptrace organization.
+Manages an organization.
 
-| Field  | Type   | Required | Note                           |
-|--------|--------|----------|--------------------------------|
-| name   | string | yes      | Updatable                      |
-| budget | float  | no       | Updatable. Uses the API default when omitted on create. Removing it later keeps the current API budget because Uptrace does not expose an unset/reset operation. |
-| id     | string | computed |                                |
+| Field  | Type   | Required | Description                        |
+|--------|--------|----------|------------------------------------|
+| name   | string | yes      | Organization name. Updatable.      |
+| budget | float  | no       | Budget limit. Updatable. Defaults to the server value when omitted; removing it later preserves the current value. |
+| id     | string | computed |                                    |
 
 ### uptrace_project
 
-Manages an Uptrace project scoped under an organization.
+Manages a project scoped under an organization.
 
-| Field                  | Type   | Required | Note                                                                        |
-|------------------------|--------|----------|-----------------------------------------------------------------------------|
-| org_id                 | string | yes      | Forces replacement on change.                                               |
-| name                   | string | yes      | Updatable.                                                                  |
-| group_by_env           | bool   | no       | Updatable.                                                                  |
-| group_funcs_by_service | bool   | no       | Updatable.                                                                  |
-| semconv_version        | string | no       | One of `none`, `v1.25.0`, `v1.33.0`.                                        |
-| display_log_severity   | bool   | no       | Updatable.                                                                  |
-| count_distinct         | bool   | no       | Updatable.                                                                  |
-| span_time_range        | string | no       | Duration (e.g. `"24h"`). Default query time range for spans.                |
-| log_time_range         | string | no       | Duration. Default query time range for logs.                                |
-| event_time_range       | string | no       | Duration. Default query time range for events.                              |
-| span_retention         | string | no       | Duration (e.g. `"30d"`, `"4w"`). Server minimum applies.                    |
-| log_retention          | string | no       | Duration.                                                                   |
-| event_retention        | string | no       | Duration.                                                                   |
-| metric_retention       | string | no       | Duration.                                                                   |
-| id                     | string | computed |                                                                             |
+| Field                  | Type   | Required | Description                                                      |
+|------------------------|--------|----------|------------------------------------------------------------------|
+| org_id                 | string | yes      | Organization ID. Forces replacement on change.                   |
+| name                   | string | yes      | Project name. Updatable.                                         |
+| group_by_env           | bool   | no       | Group spans by environment. Updatable.                           |
+| group_funcs_by_service | bool   | no       | Group functions by service. Updatable.                           |
+| semconv_version        | string | no       | One of `none`, `v1.25.0`, `v1.33.0`.                            |
+| display_log_severity   | bool   | no       | Updatable.                                                       |
+| count_distinct         | bool   | no       | Updatable.                                                       |
+| span_time_range        | string | no       | Default query time range for spans (e.g. `"24h"`).              |
+| log_time_range         | string | no       | Default query time range for logs.                               |
+| event_time_range       | string | no       | Default query time range for events.                             |
+| span_retention         | string | no       | Data retention for spans (e.g. `"30d"`, `"4w"`). Server minimum applies. |
+| log_retention          | string | no       | Data retention for logs.                                         |
+| event_retention        | string | no       | Data retention for events.                                       |
+| metric_retention       | string | no       | Data retention for metrics.                                      |
+| id                     | string | computed |                                                                  |
 
-Duration strings accept the stdlib units `ns`, `us`, `ms`, `s`, `m`, `h` plus `d` (day) and `w` (week).
+Duration strings accept `ns`, `us`, `ms`, `s`, `m`, `h`, `d` (day), and `w` (week).
 
 ### uptrace_project_token
 
-Manages an ingest token for an Uptrace project.
+Manages an ingest token for a project.
 
-| Field      | Type   | Required | Note                                                              |
-|------------|--------|----------|-------------------------------------------------------------------|
-| project_id | string | yes      | Forces replacement on change.                                     |
-| name       | string | no       | Updatable. Removing the attribute clears the name on the server.  |
-| id         | string | computed |                                                                   |
-| token      | string | computed | Sensitive. Generated server-side; never supplied by the user.     |
-| dsn        | string | computed | Sensitive. Ingest URL with the token embedded.                    |
+| Field      | Type   | Required | Description                                               |
+|------------|--------|----------|-----------------------------------------------------------|
+| project_id | string | yes      | Project ID. Forces replacement on change.                 |
+| name       | string | no       | Token name. Updatable. Removing it clears the name.       |
+| id         | string | computed |                                                           |
+| token      | string | computed | Sensitive. The generated ingest token.                    |
+| dsn        | string | computed | Sensitive. Ingest URL with the token embedded.            |
 
-Import with `<project_id>:<token_id>`.
+Import: `terraform import uptrace_project_token.x <project_id>:<token_id>`
 
-### uptrace_user / uptrace_org_user
+### uptrace_user
 
-The two resources together let you declare org membership end-to-end from Terraform.
+Invites a user to Uptrace. The backend sends an account-invitation email. If the email already
+belongs to a confirmed user, the existing user is adopted (no duplicate is created).
 
-`uptrace_user` issues an orgless invite that pre-creates a global User row and returns its numeric ID. `uptrace_org_user` then attaches that user to a specific organization with a role.
+| Field | Type   | Required | Description                                               |
+|-------|--------|----------|-----------------------------------------------------------|
+| email | string | yes      | Lowercase, trimmed. Forces replacement on change.         |
+| id    | string | computed | Numeric user ID.                                          |
 
-#### uptrace_user
+Delete removes the resource from state only -- the underlying user remains on the server.
 
-Manages a global Uptrace user. Creation issues an orgless invite that pre-creates the User row server-side and returns its ID; pair with `uptrace_org_user` to grant org membership.
+### uptrace_org_user
 
-Any authenticated token can create users. The backend sends an account-invitation email to the recipient with a link to confirm the email and set a password. If the email already maps to a confirmed user, no invite is created and the existing user ID is returned — `apply` adopts existing users by email, so importing is unnecessary and not supported.
+Adds a user to an organization with a role. Pair with `uptrace_user` to manage the full
+invite-to-membership lifecycle.
 
-| Field | Type   | Required | Note                                                                       |
-|-------|--------|----------|----------------------------------------------------------------------------|
-| email | string | yes      | Must be lowercase and trimmed. Forces replacement on change.               |
-| id    | string | computed | Numeric user ID returned by the backend.                                   |
-
-Email is immutable; changing it forces recreation. Delete removes the resource from Terraform state only — the underlying User row and any pending invite remain on the server, since the API has no global user-delete endpoint. Drift detection is not implemented: out-of-band changes to the underlying user are not reflected in plan output.
-
-#### uptrace_org_user
-
-Adds an existing user to an organization with a role. Idempotent — creating twice updates the role server-side. Pair with `uptrace_user` to manage the underlying user.
-
-| Field   | Type   | Required | Note                                                                                   |
-|---------|--------|----------|----------------------------------------------------------------------------------------|
-| org_id  | string | yes      | Forces replacement on change.                                                          |
-| user_id | string | yes      | Forces replacement on change.                                                          |
+| Field   | Type   | Required | Description                                                                    |
+|---------|--------|----------|--------------------------------------------------------------------------------|
+| org_id  | string | yes      | Organization ID. Forces replacement on change.                                 |
+| user_id | string | yes      | User ID (from `uptrace_user`). Forces replacement on change.                   |
 | role    | string | yes      | One of `owner`, `admin`, `member`, `viewer`, `billing_manager`, `collaborator`. Updatable. |
-| id      | string | computed | OrgUser ID. Use where another resource wants an `org_user_id` (e.g. `uptrace_team_user`). |
+| id      | string | computed | OrgUser ID. Pass to `uptrace_team_user.org_user_id`.                           |
 
-Import with `<org_id>:<org_user_id>`.
+Import: `terraform import uptrace_org_user.x <org_id>:<org_user_id>`
 
-### uptrace_team / uptrace_team_project / uptrace_team_user
+**Example -- invite a user and grant org membership:**
 
-Teams group users for project-scoped access control within an organization. Teams are a Premium feature; the backend returns `403` for unlicensed organizations.
+```hcl
+resource "uptrace_user" "alice" {
+  email = "alice@example.com"
+}
 
-`uptrace_team` manages the team itself. `uptrace_team_project` and `uptrace_team_user` attach projects and users to a team; each is a separate membership resource with the composite identity `(team_id, project_id)` or `(team_id, org_user_id)`.
+resource "uptrace_org_user" "alice" {
+  org_id  = uptrace_org.main.id
+  user_id = uptrace_user.alice.id
+  role    = "admin"
+}
+```
 
-#### uptrace_team
+### uptrace_team
 
-Manages a team within an organization.
+Manages a team within an organization. Teams are a **Premium** feature.
 
-| Field      | Type   | Required | Note                                                                                   |
-|------------|--------|----------|----------------------------------------------------------------------------------------|
-| org_id     | string | yes      | Forces replacement on change.                                                          |
-| name       | string | yes      | Updatable. 1–255 characters.                                                           |
-| perm_level | string | no       | Updatable. One of `none`, `view`, `edit`, `admin`. Computed when omitted — the backend fills the default (currently `view`). Removing the attribute preserves the current value; it cannot be cleared back to null via Terraform. |
-| id         | string | computed |                                                                                        |
+| Field      | Type   | Required | Description                                                    |
+|------------|--------|----------|----------------------------------------------------------------|
+| org_id     | string | yes      | Organization ID. Forces replacement on change.                 |
+| name       | string | yes      | Team name (1-255 characters). Updatable.                       |
+| perm_level | string | no       | One of `none`, `view`, `edit`, `admin`. Server fills the default when omitted. |
+| id         | string | computed |                                                                |
 
-Import with `<org_id>:<team_id>`.
+Import: `terraform import uptrace_team.x <org_id>:<team_id>`
 
-#### uptrace_team_project
+### uptrace_team_project
 
-Grants a team access to a project. Idempotent: creating twice is a no-op server-side. There is no update — changing any field forces replacement.
+Grants a team access to a project. All fields force replacement (no in-place update).
 
-| Field      | Type   | Required | Note                                         |
-|------------|--------|----------|----------------------------------------------|
-| org_id     | string | yes      | Forces replacement on change.                |
-| team_id    | string | yes      | Forces replacement on change.                |
-| project_id | string | yes      | Forces replacement on change.                |
-| id         | string | computed | Equals `project_id`. Unique within the team. |
+| Field      | Type   | Required | Description                           |
+|------------|--------|----------|---------------------------------------|
+| org_id     | string | yes      | Organization ID.                      |
+| team_id    | string | yes      | Team ID.                              |
+| project_id | string | yes      | Project ID.                           |
+| id         | string | computed | Equals `project_id`.                  |
 
-Import with `<org_id>:<team_id>:<project_id>`.
+Import: `terraform import uptrace_team_project.x <org_id>:<team_id>:<project_id>`
 
-#### uptrace_team_user
+### uptrace_team_user
 
-Adds an organization user to a team. Idempotent. There is no update — changing any field forces replacement.
+Adds an organization user to a team. All fields force replacement.
 
-`org_user_id` is the ID of the OrgUser record linking the user to the organization (not the User ID). Create the membership with the `uptrace_org_user` resource and chain its `id` here, or `terraform import` an existing membership.
+| Field       | Type   | Required | Description                                     |
+|-------------|--------|----------|-------------------------------------------------|
+| org_id      | string | yes      | Organization ID.                                |
+| team_id     | string | yes      | Team ID.                                        |
+| org_user_id | string | yes      | OrgUser ID (from `uptrace_org_user.id`).        |
+| id          | string | computed | Equals `org_user_id`.                           |
 
-| Field       | Type   | Required | Note                                             |
-|-------------|--------|----------|--------------------------------------------------|
-| org_id      | string | yes      | Forces replacement on change.                    |
-| team_id     | string | yes      | Forces replacement on change.                    |
-| org_user_id | string | yes      | Forces replacement on change.                    |
-| id          | string | computed | Equals `org_user_id`. Unique within the team.    |
-
-Import with `<org_id>:<team_id>:<org_user_id>`.
+Import: `terraform import uptrace_team_user.x <org_id>:<team_id>:<org_user_id>`
 
 ### Notification channels
 
-Each notification-channel type is its own resource. All resources share the same top-level fields; the type-specific fields differ per resource.
+Each notification-channel type is its own resource. All share a common set of fields plus
+type-specific configuration.
 
-Shared fields (all 12 resources):
+**Shared fields:**
 
-| Field       | Type         | Required | Note                                                                         |
-|-------------|--------------|----------|------------------------------------------------------------------------------|
-| project_id  | string       | yes      | Forces replacement on change.                                                |
-| name        | string       | yes      | Updatable.                                                                   |
-| priorities  | list(string) | yes      | Alert priorities to match. Each one of `info`, `low`, `medium`, `high`.      |
-| match_all   | bool         | no       | Defaults to `true`. When `false`, `monitor_ids` must be set and non-empty.   |
-| monitor_ids | list(string) | no       | Required when `match_all = false`.                                           |
-| condition   | string       | no       | Alert condition expression.                                                  |
-| id          | string       | computed |                                                                              |
-| status      | string       | computed | One of `delivering`, `paused`, `disabled`, `draft`.                          |
+| Field       | Type         | Required | Description                                                           |
+|-------------|--------------|----------|-----------------------------------------------------------------------|
+| project_id  | string       | yes      | Project ID. Forces replacement on change.                             |
+| name        | string       | yes      | Channel name. Updatable.                                              |
+| priorities  | list(string) | yes      | Alert priorities to match: `info`, `low`, `medium`, `high`.          |
+| match_all   | bool         | no       | Defaults to `true`. Set `false` to restrict to `monitor_ids`.        |
+| monitor_ids | list(string) | no       | Required when `match_all = false`.                                    |
+| condition   | string       | no       | Alert condition expression.                                           |
+| id          | string       | computed |                                                                       |
+| status      | string       | computed | One of `delivering`, `paused`, `disabled`, `draft`.                  |
 
-Type-specific fields per resource:
+**Type-specific fields:**
 
 | Resource                         | Fields                                                                                                                           |
 |----------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
-| `uptrace_slack_channel`          | `auth_method` (`webhook` or `token`), `webhook_url`, `token`, `channel`. Fields required depend on `auth_method`.                |
+| `uptrace_slack_channel`          | `auth_method` (`webhook` or `token`), `webhook_url`, `token`, `channel`. Required fields depend on `auth_method`.                |
 | `uptrace_google_chat_channel`    | `webhook_url`                                                                                                                    |
 | `uptrace_mattermost_channel`     | `webhook_url`                                                                                                                    |
 | `uptrace_teams_channel`          | `webhook_url`                                                                                                                    |
 | `uptrace_pagerduty_channel`      | `routing_key`, `severity` (`critical`, `error`, `warning`, `info`)                                                               |
-| `uptrace_opsgenie_channel`       | `api_key`, `priority` (`P1`–`P5`)                                                                                                |
+| `uptrace_opsgenie_channel`       | `api_key`, `priority` (`P1`-`P5`)                                                                                                |
 | `uptrace_telegram_channel`       | `chat_id` (int64)                                                                                                                |
-| `uptrace_pushover_channel`       | `token`, `user_key`; optional `priority` (int, -2 to 2), `sound`                                                                 |
-| `uptrace_webhook_channel`        | `url`; optional `payload` (JSON object string — use `jsonencode()`)                                                              |
-| `uptrace_alertmanager_channel`   | `url`; optional `auth_method` (`none`, `basic_auth`, `bearer`), `username`, `password`, `token`. Credential fields required depend on `auth_method`. |
+| `uptrace_pushover_channel`       | `token`, `user_key`; optional `priority` (int, -2 to 2), `sound`                                                                |
+| `uptrace_webhook_channel`        | `url`; optional `payload` (JSON string -- use `jsonencode()`)                                                                    |
+| `uptrace_alertmanager_channel`   | `url`; optional `auth_method` (`none`, `basic_auth`, `bearer`), `username`, `password`, `token`                                  |
 | `uptrace_incidentio_channel`     | `url`, `api_key`                                                                                                                 |
 | `uptrace_servicenow_channel`     | `url`, `username`, `password`; optional `category`, `subcategory`, `impact` (`1`-`3`), `urgency` (`1`-`3`), `severity` (`1`-`5`), `caller_id`, `group`, `assigned_to`, `opened_by`, `notify` (`1` or `2`), `due_date` |
 
-Import each resource with `<project_id>:<channel_id>`.
+Import any channel: `terraform import uptrace_<type>_channel.x <project_id>:<channel_id>`
 
-### uptrace_error_monitor / uptrace_metric_monitor
+**Example -- Slack webhook:**
 
-Error and metric monitors are exposed as two separate resources that share the same set of top-level fields. Each takes a single `params` block whose shape differs per resource.
+```hcl
+resource "uptrace_slack_channel" "alerts" {
+  project_id = uptrace_project.api.id
+  name       = "alerts-slack"
+  priorities = ["high", "medium"]
 
-Shared fields (both resources):
+  auth_method = "webhook"
+  webhook_url = "https://hooks.slack.com/services/T00/B00/XXXX"
+}
+```
 
-| Field                     | Type              | Required | Note                                                                                                |
-|---------------------------|-------------------|----------|-----------------------------------------------------------------------------------------------------|
-| project_id                | string            | yes      | Forces replacement on change.                                                                       |
-| name                      | string            | yes      | Updatable.                                                                                          |
-| notify_everyone_by_email  | bool              | no       | Defaults to `false`. Updatable.                                                                     |
-| trend_agg_func            | string            | no       | Defaults to `sum`. One of `sum`, `avg`, `median`, `last`.                                           |
-| trend_sensitivity         | string            | no       | Defaults to `medium`. One of `low`, `medium`, `high`.                                               |
-| team_ids                  | set(string)       | no       | Team IDs to notify when the monitor fires.                                                          |
-| channel_ids               | set(string)       | no       | Notification channel IDs (e.g. `uptrace_slack_channel.x.id`). No `tonumber()` wrapper needed.       |
-| id                        | string            | computed |                                                                                                     |
-| status                    | string            | computed | One of `active`, `paused`, `firing`, `no_data`, `disabled`.                                         |
+### uptrace_error_monitor
 
-#### uptrace_error_monitor
+Watches trend anomalies in an MQL query and fires alerts.
 
-Watches trend anomalies in an MQL query and fires alerts through attached notification channels and/or team email.
-
-`params`:
-
-| Field                     | Type              | Required | Note                                                                                                |
-|---------------------------|-------------------|----------|-----------------------------------------------------------------------------------------------------|
-| metrics                   | list of objects   | yes      | At least one metric. Each: `{ name = "...", alias = "$..." }`. Aliases must start with `$`.         |
-| query                     | string            | yes      | MQL query expression. The backend normalizes MQL; the provider preserves the user's input form.     |
-
-#### uptrace_metric_monitor
+### uptrace_metric_monitor
 
 Evaluates an MQL query on a schedule with a manual threshold or automatic trend-based detector.
 
-`params`:
+**Shared fields (both monitors):**
 
-| Field           | Type            | Required | Note                                                                                               |
-|-----------------|-----------------|----------|----------------------------------------------------------------------------------------------------|
-| metrics         | list of objects | yes      | At least one metric. Each: `{ name = "...", alias = "$..." }`.                                     |
-| query           | string          | yes      | MQL query expression.                                                                              |
-| column          | object          | no       | `{ name = "...", unit = "milliseconds" }`. The result column the detector evaluates.               |
-| resolution      | number          | no       | Evaluation resolution in milliseconds.                                                             |
-| num_eval_points | number          | no       | Number of consecutive evaluation points that must breach the threshold.                            |
-| absent_points   | string          | no       | One of `ignore`, `alert`, `zero`.                                                                  |
-| time_offset     | number          | no       | Time offset in milliseconds applied to the query before evaluation.                                |
-| detector        | object          | yes      | Exactly one of `manual {}` or `auto {}`.                                                           |
+| Field                     | Type        | Required | Description                                                              |
+|---------------------------|-------------|----------|--------------------------------------------------------------------------|
+| project_id                | string      | yes      | Project ID. Forces replacement on change.                                |
+| name                      | string      | yes      | Monitor name. Updatable.                                                 |
+| notify_everyone_by_email  | bool        | no       | Defaults to `false`. Updatable.                                          |
+| trend_agg_func            | string      | no       | One of `sum`, `avg`, `median`, `last`. Defaults to `sum`.                |
+| trend_sensitivity         | string      | no       | One of `low`, `medium`, `high`. Defaults to `medium`.                    |
+| team_ids                  | set(string) | no       | Team IDs to notify.                                                      |
+| channel_ids               | set(string) | no       | Notification channel IDs.                                                |
+| id                        | string      | computed |                                                                          |
+| status                    | string      | computed | One of `active`, `paused`, `firing`, `no_data`, `disabled`.              |
 
-`params.detector.manual`:
+**`params` block -- error monitor:**
 
-| Field      | Type   | Required | Note                                                                 |
-|------------|--------|----------|----------------------------------------------------------------------|
-| min_value  | number | no       | Alert when value falls below this threshold.                         |
-| max_value  | number | no       | Alert when value rises above this threshold.                         |
-| recovery   | object | no       | Hysteresis `{ min_value, max_value }` used to clear an active alert. |
+| Field   | Type            | Required | Description                                                    |
+|---------|-----------------|----------|----------------------------------------------------------------|
+| metrics | list of objects | yes      | `{ name = "...", alias = "$..." }`. Aliases must start with `$`. |
+| query   | string          | yes      | MQL query expression.                                          |
 
-`params.detector.auto`:
+**`params` block -- metric monitor:**
 
-| Field            | Type   | Required | Note                                               |
-|------------------|--------|----------|----------------------------------------------------|
-| tolerance        | string | no       | One of `low`, `medium`, `high`.                    |
-| training_period  | number | no       | Training period in milliseconds.                   |
-| min_dev_fraction | number | no       | Minimum deviation as a fraction of the baseline.   |
-| min_dev_absolute | number | no       | Minimum absolute deviation from the baseline.      |
+| Field           | Type            | Required | Description                                                    |
+|-----------------|-----------------|----------|----------------------------------------------------------------|
+| metrics         | list of objects | yes      | `{ name = "...", alias = "$..." }`.                            |
+| query           | string          | yes      | MQL query expression.                                          |
+| column          | object          | no       | `{ name = "...", unit = "milliseconds" }`.                     |
+| resolution      | number          | no       | Evaluation resolution in milliseconds.                         |
+| num_eval_points | number          | no       | Consecutive breach points before alerting.                     |
+| absent_points   | string          | no       | One of `ignore`, `alert`, `zero`.                              |
+| time_offset     | number          | no       | Time offset in milliseconds.                                   |
+| detector        | object          | yes      | Exactly one of `manual {}` or `auto {}`.                       |
 
-Not yet exposed on either resource: `repeat_interval` (shared oneOf of `default` / `fixed` / `linear` / `exponential`). Follow-up work.
+`detector.manual`: optional `min_value`, `max_value`, `recovery { min_value, max_value }`.
 
-## Files not in git
+`detector.auto`: optional `tolerance` (`low`/`medium`/`high`), `training_period` (ms),
+`min_dev_fraction`, `min_dev_absolute`.
 
-The `.gitignore` excludes files generated locally:
+Import either monitor: `terraform import uptrace_<error|metric>_monitor.x <project_id>:<monitor_id>`
 
-| File | What it is | How to get it |
-|------|-----------|---------------|
-| `terraform-provider-uptrace` | Binary | `go build -o terraform-provider-uptrace .` |
-| `.terraformrc` / `.tofurc` | Dev override config | Create manually (see Setup) |
-| `*.tfstate` | Terraform state | Created by `terraform apply` |
-| `.terraform/` | Provider cache | Created by `terraform init` |
-| `.terraform.lock.hcl` | Dependency lock | Created by `terraform init` |
-| `.env` | Local credentials | `cp .env.example .env` |
+## Importing existing resources
+
+To bring existing Uptrace resources under Terraform management, use `terraform import`.
+The import ID format is listed under each resource above.
+
+```bash
+terraform import uptrace_org.main 123
+terraform import uptrace_project.api 456
+terraform import uptrace_slack_channel.alerts 456:789
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for building from source, running tests, and development
+setup.
